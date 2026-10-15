@@ -28,11 +28,25 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
 
 const cache = new Map<string, SimResult>();
 
+/** Arayüzde seçilebilen planlar. "Önerilen" senaryoya göre doğru optimize planı seçer. */
+export const UI_PLANS = [
+  { id: 'current', label: 'Mevcut' },
+  { id: 'sample-candidate', label: 'Deneme' },
+  { id: 'optimized', label: 'Önerilen' },
+] as const;
+export const planLabel = (id: string) => UI_PLANS.find((p) => p.id === id)?.label ?? id;
+
+export function resolvePlanId(planId: string, scenario: ScenarioId): string {
+  return planId === 'optimized' && scenario === 'surge' ? 'optimized-event' : planId;
+}
+export const resolvePlan = (planId: string, scenario: ScenarioId) =>
+  DATASET.plans.find((p) => p.id === resolvePlanId(planId, scenario))!;
+
 export function getResult(planId: string, scenario: ScenarioId): SimResult {
   const key = `${planId}|${scenario}`;
   let r = cache.get(key);
   if (!r) {
-    const plan = DATASET.plans.find((p) => p.id === planId)!;
+    const plan = resolvePlan(planId, scenario);
     r = simulate(DATASET, plan, SCENARIOS[scenario].options);
     cache.set(key, r);
   }

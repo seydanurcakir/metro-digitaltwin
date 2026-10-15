@@ -5,6 +5,7 @@ import { buildWeekdayProfile, SLOT_MINUTES } from './data/time';
 import { buildDemand } from './data/demand';
 import { CONSTRAINTS, CURRENT_PLAN, SAMPLE_CANDIDATE, T13_ON_TRUNK } from './data/plans';
 import { SOURCES } from './data/sources';
+import optimizedPlans from './data/optimized-plans.json';
 
 export * from './types';
 export { trainCapacity, unitCapacity } from './data/fleet';
@@ -17,7 +18,8 @@ export function buildDataset(): TwinDataset {
     line: LINE_T14,
     fleet: FLEET,
     demand: buildDemand(LINE_T14, profile),
-    plans: [CURRENT_PLAN, SAMPLE_CANDIDATE],
+    // Önerilen planlar scripts/optimize.ts ile üretilir (npm run optimize)
+    plans: [CURRENT_PLAN, SAMPLE_CANDIDATE, ...(optimizedPlans as ServicePlan[])],
     otherLine: T13_ON_TRUNK,
     constraints: CONSTRAINTS,
     sources: SOURCES,

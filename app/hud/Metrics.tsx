@@ -1,6 +1,6 @@
 // Ölçüt şeridi ve plan karşılaştırması. Tüm sayılar metrics.ts üzerinden simülasyondan hesaplanır.
 import { useTwin } from '../twin/store';
-import { DATASET, SCENARIOS } from '../twin/model';
+import { DATASET, SCENARIOS, planLabel, resolvePlan } from '../twin/model';
 import {
   METRIC_ROWS, WINDOWS, fmtDec, p90Series, planMetrics, slotIndexOf, trainsOnLine, verdict, windowRange,
   type MetricKey, type Scope, type WindowId,
@@ -9,8 +9,10 @@ import { fmtClock } from '../twin/selectors';
 import { SLOTS } from '../../src/index';
 import { SERVICE_START_MIN, SLOT_MINUTES } from '../../src/data/time';
 
-const planName = (id: string) => (DATASET.plans.find((p) => p.id === id)!.kind === 'current' ? 'Mevcut' : 'Deneme');
-const otherPlan = (id: string) => DATASET.plans.find((p) => p.id !== id)!.id;
+const planName = planLabel;
+/** Karşılaştırmanın referansı her zaman mevcut tarife; mevcut seçiliyse önerilen planla karşılaştırılır */
+const otherPlan = (id: string) => (id === 'current' ? 'optimized' : 'current');
+const comparedPlan = (id: string) => (id === 'current' ? 'optimized' : id);
 const LIMIT_LF = DATASET.constraints.maxLoadFactor.value;
 const LIMIT_D = DATASET.constraints.platformDensityLimit.value;
 
@@ -70,7 +72,7 @@ function DayChart({ scope, win }: { scope: Scope; win: WindowId }) {
   const t = useTwin((s) => Math.floor(s.t));
   const scenario = useTwin((s) => s.scenario);
   const planId = useTwin((s) => s.planId);
-  const ids = DATASET.plans.map((p) => p.id);
+  const ids = ['current', comparedPlan(planId)];
   const series = ids.map((id) => p90Series(id, scenario, scope));
   const W = 420, H = 132, L = 30, R = 6, top = 8, base = 104;
   const n = SLOTS.length;
@@ -83,14 +85,14 @@ function DayChart({ scope, win }: { scope: Scope; win: WindowId }) {
   const [wa, wb] = windowRange(win, t);
   const ticksY = Array.from({ length: yMax / 300 + 1 }, (_, i) => i * 300).filter((v, i, a) => a.length <= 6 || i % 2 === 0);
   const hours = [6, 9, 12, 15, 18, 21, 24];
-  const colors: Record<string, string> = { current: 'var(--series-a)', 'sample-candidate': 'var(--series-b)' };
+  const colors = (id: string) => (id === 'current' ? 'var(--series-a)' : 'var(--series-b)');
   return (
     <figure className="chart">
       <figcaption className="chart-head">
         <span className="label">Gün boyu dağılma süresi (P90)</span>
         <span className="chart-legend">
           {ids.map((id) => (
-            <span key={id}><span className="key-line" style={{ background: colors[id] }} />{planName(id)}</span>
+            <span key={id}><span className="key-line" style={{ background: colors(id) }} />{planName(id)}</span>
           ))}
         </span>
       </figcaption>
@@ -107,7 +109,7 @@ function DayChart({ scope, win }: { scope: Scope; win: WindowId }) {
         ))}
         <text x={L - 4} y={top - 1} textAnchor="end" className="axis">dk</text>
         {ids.map((id, k) => (
-          <path key={id} d={path(series[k])} fill="none" stroke={colors[id]} strokeWidth={id === planId ? 2.2 : 1.4} strokeLinejoin="round" opacity={id === planId ? 1 : 0.85} />
+          <path key={id} d={path(series[k])} fill="none" stroke={colors(id)} strokeWidth={id === planId ? 2.2 : 1.4} strokeLinejoin="round" opacity={id === planId ? 1 : 0.85} />
         ))}
         <line x1={xt(t)} x2={xt(t)} y1={top} y2={base} stroke="var(--fg)" strokeDasharray="2 3" />
         <circle cx={xt(t)} cy={y(series[ids.indexOf(planId)][slotIndexOf(t)])} r="3.4" fill="var(--fg)" />
@@ -123,11 +125,11 @@ export function Compare() {
   const win = useTwin((s) => s.compareWindow);
   const scope = useTwin((s) => s.compareScope);
   const setCompare = useTwin.getState().setCompare;
-  const [base, alt] = ['current', 'sample-candidate'];
+  const [base, alt] = ['current', comparedPlan(planId)];
   const mA = planMetrics(base, scenario, win, scope, t);
   const mB = planMetrics(alt, scenario, win, scope, t);
   const slot = slotIndexOf(t);
-  const ps = DATASET.plans.map((p) => ({ id: p.id, s: p.slots[slot] }));
+  const ps = [base, alt].map((id) => ({ id, s: resolvePlan(id, scenario).slots[slot] }));
   const fmtHw = (m: number) => `${m.toLocaleString('tr-TR')} dk`;
   return (
     <section className="pane" aria-label="Plan karşılaştırması">
@@ -150,8 +152,8 @@ export function Compare() {
           <thead>
             <tr>
               <th scope="col">Ölçüt</th>
-              <th scope="col" className={planId === base ? 'sel' : ''}>Mevcut</th>
-              <th scope="col" className={planId === alt ? 'sel' : ''}>Deneme</th>
+              <th scope="col" className={planId === base ? 'sel' : ''}>{planName(base)}</th>
+              <th scope="col" className={planId === alt ? 'sel' : ''}>{planName(alt)}</th>
               <th scope="col">Fark</th>
             </tr>
           </thead>
@@ -174,7 +176,7 @@ export function Compare() {
           <span key={p.id} className="num"><strong>{planName(p.id)}</strong> {fmtHw(p.s.headwayMin)} · {p.s.unitsPerTrain} ünite</span>
         ))}
       </p>
-      <p className="note muted">Fark: Deneme − Mevcut. Yeşil daha iyi, turuncu daha kötü. Tüm ölçütlerde küçük değer daha iyidir.</p>
+      <p className="note muted">Fark: {planName(alt)} − Mevcut. Yeşil daha iyi, turuncu daha kötü. Tüm ölçütlerde küçük değer daha iyidir.</p>
     </section>
   );
 }

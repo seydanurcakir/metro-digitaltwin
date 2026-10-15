@@ -1,0 +1,826 @@
+[
+ {
+  "id": "optimized",
+  "name": "Önerilen plan",
+  "kind": "candidate",
+  "slots": [
+   {
+    "slotIndex": 0,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 1,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 2,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 3,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 4,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 5,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 6,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 7,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 8,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 9,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 10,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 11,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 12,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 13,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 14,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 15,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 16,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 17,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 18,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 19,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 20,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 21,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 22,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 23,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 24,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 25,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 26,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 27,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 28,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 29,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 30,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 31,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 32,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 33,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 34,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 35,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 36,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 37,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 38,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 39,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 40,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 41,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 42,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 43,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 44,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 45,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 46,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 47,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 48,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 49,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 50,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 51,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 52,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 53,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 54,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 55,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 56,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 57,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 58,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 59,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 60,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 61,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 62,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 63,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 64,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 65,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 66,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 67,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 68,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 69,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 70,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 71,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 72,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 73,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 74,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 75,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 76,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 77,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 78,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 79,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   }
+  ],
+  "src": {
+   "kind": "derived",
+   "ref": "optimizer",
+   "note": "Optimizasyon: bütçe 1104 ünite-sefer, yolcu ağırlıklı dağılma süresi en aza indirildi, simülasyonla doğrulandı."
+  }
+ },
+ {
+  "id": "optimized-event",
+  "name": "Önerilen plan (etkinlik)",
+  "kind": "candidate",
+  "slots": [
+   {
+    "slotIndex": 0,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 1,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 2,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 3,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 4,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 5,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 6,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 7,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 8,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 9,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 10,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 11,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 12,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 13,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 14,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 15,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 16,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 17,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 18,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 19,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 20,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 21,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 22,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 23,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 24,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 25,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 26,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 27,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 28,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 29,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 30,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 31,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 32,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 33,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 34,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 35,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 36,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 37,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 38,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 39,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 40,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 41,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 42,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 43,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 44,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 45,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 46,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 47,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 48,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 49,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 50,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 51,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 52,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 53,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 54,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 55,
+    "headwayMin": 5,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 56,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 57,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 58,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 59,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 60,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 61,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 62,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 63,
+    "headwayMin": 5,
+    "unitsPerTrain": 3
+   },
+   {
+    "slotIndex": 64,
+    "headwayMin": 5,
+    "unitsPerTrain": 3
+   },
+   {
+    "slotIndex": 65,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 66,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 67,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 68,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 69,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 70,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 71,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 72,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 73,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 74,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 75,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 76,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 77,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 78,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   },
+   {
+    "slotIndex": 79,
+    "headwayMin": 4,
+    "unitsPerTrain": 2
+   }
+  ],
+  "src": {
+   "kind": "derived",
+   "ref": "optimizer",
+   "note": "Optimizasyon: bütçe 1104 ünite-sefer, yolcu ağırlıklı dağılma süresi en aza indirildi, simülasyonla doğrulandı."
+  }
+ }
+]

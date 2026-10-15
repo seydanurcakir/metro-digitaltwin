@@ -9,7 +9,9 @@
     "dev": "vite",
     "build": "vite build && node scripts/to-artifact.mjs",
     "test:app": "tsx scripts/test-app.ts",
-    "test": "tsx scripts/validate.ts && tsx scripts/test-sim.ts && tsx scripts/test-app.ts"
+    "test": "tsx scripts/validate.ts && tsx scripts/test-sim.ts && tsx scripts/test-app.ts && tsx scripts/test-opt.ts",
+    "optimize": "tsx scripts/optimize.ts",
+    "test:opt": "tsx scripts/test-opt.ts"
   },
   "keywords": [],
   "author": "",

@@ -1,6 +1,6 @@
 // Sahne üstündeki kontroller ve canlı okuma. Sayılar store + selectors'tan hesaplanır, elle yazılmaz.
 import { useTwin, SPEEDS, STATION } from '../twin/store';
-import { DATASET, SCENARIOS } from '../twin/model';
+import { DATASET, SCENARIOS, UI_PLANS } from '../twin/model';
 import { fmtClock, fmtSecs, nextArrivals, platformAt } from '../twin/selectors';
 import { HEAT_STEPS } from '../scene/Crowd';
 import { C } from '../scene/palette';
@@ -78,9 +78,9 @@ export function Hud() {
         <div className="row">
           <span className="label">Plan</span>
           <div className="seg" role="group" aria-label="Sefer planı">
-            {DATASET.plans.map((pl) => (
+            {UI_PLANS.map((pl) => (
               <button type="button" key={pl.id} id={`plan-${pl.id}`} aria-pressed={planId === pl.id} onClick={() => setPlan(pl.id)}>
-                {pl.kind === 'current' ? 'Mevcut' : 'Deneme'}
+                {pl.label}
               </button>
             ))}
           </div>

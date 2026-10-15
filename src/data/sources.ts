@@ -31,6 +31,11 @@ export const SOURCES: SourceRef[] = [
     note: 'Gerçek değer bulunamadı; makul bir başlangıç değeri. İşletmeci verisiyle değiştirilmeli.',
   },
   {
+    id: 'optimizer',
+    title: 'Metro İkizi optimizasyonu (scripts/optimize.ts)',
+    note: 'Bütçe ve kısıtlar altında dağılma süresini en aza indiren plan; simülasyonla doğrulandı.',
+  },
+  {
     id: 'synthetic',
     title: 'Sentetik üretim',
     note: 'Yayınlanmış günlük toplamlardan model tarafından üretildi (gün içi dağılım, varış istasyonları).',

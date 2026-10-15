@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { Scene } from './scene/Scene';
 import { Hud } from './hud/Hud';
 import { useTwin } from './twin/store';
-import { DATASET, getResult } from './twin/model';
+import { UI_PLANS, getResult } from './twin/model';
 import { p90Series } from './twin/metrics';
 import './styles.css';
 
@@ -28,7 +28,7 @@ function usePrewarm() {
   useEffect(() => {
     const jobs: (() => void)[] = [];
     for (const sc of ['normal', 'surge'] as const)
-      for (const p of DATASET.plans)
+      for (const p of UI_PLANS)
         jobs.push(() => { getResult(p.id, sc); p90Series(p.id, sc, 'station'); p90Series(p.id, sc, 'line'); });
     let id = 0;
     const hasIdle = typeof window.requestIdleCallback === 'function';

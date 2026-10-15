@@ -4,10 +4,32 @@ Stockholm metrosu Kırmızı Hat T14 (Fruängen – Mörby centrum) için simül
 
 ```bash
 npm install
-npm test        # veri modeli + simülasyon + uygulama testleri
+npm test        # veri modeli + simülasyon + uygulama + optimizasyon testleri
 npm run dev     # 3B sahneyi tarayıcıda aç
 npm run build   # tek dosyalık sayfa: dist/
 ```
+
+## Adım 6: Optimizasyon (`src/opt/optimize.ts`)
+
+Her 15 dakikalık dilim için sefer aralığı (4 / 5 / 6 / 7,5 / 10 dk) ve tren uzunluğu (2 / 3 ünite) seçer.
+
+- **Amaç:** yolcu ağırlıklı dağılma süresini en aza indirmek.
+- **Bütçe:** toplam ünite-sefer ≤ mevcut tarife (ek işletme maliyeti yok).
+- **Kısıtlar:** ortak gövde (T13 + T14 ≤ 24 tren/saat), filo (54 ünite), en kısa ve en uzun sefer aralığı, vagon doluluğu ≤ %90, peron yoğunluğu ≤ 2,0 kişi/m².
+- **Yöntem:** çoklu seçimli sırt çantası problemi, dinamik programlamayla kesin çözüm. Ardından simülasyonla doğrulama: sınırı aşan dilimde ve kendinden önceki iki dilimde kapasite payı artırılıp yeniden çözülür. Trenler merkeze son duraktan ~20 dakikada vardığı için önlem önceden başlar.
+
+```bash
+npm run optimize   # src/data/optimized-plans.json dosyasını yeniden üretir
+```
+
+| | Mevcut | Önerilen |
+|---|---|---|
+| Normal gün, akşam T-Centralen dağılma süresi | 9:00 | 3:30 |
+| Akşam kalabalığı (21:00, +3 000), T-Centralen | 29:45 | 4:45 |
+| Akşam kalabalığı, en yüksek peron yoğunluğu | 2,73 | 1,70 kişi/m² |
+| İşletme (ünite-sefer / gün) | 1 104 | 1 044 – 1 050 |
+
+Sonuçlar sentetik talebe dayanır; gerçek turnike verisiyle optimizasyon yeniden çalıştırılmalıdır.
 
 ## Adım 5: Ölçütler, karşılaştırma, inceleme
 
