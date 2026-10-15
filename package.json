@@ -1,0 +1,36 @@
+{
+  "name": "metro-twin",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "typecheck": "tsc",
+    "validate": "tsx scripts/validate.ts",
+    "sim": "tsx scripts/test-sim.ts",
+    "dev": "vite",
+    "build": "vite build && node scripts/to-artifact.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@types/three": "^0.169.0",
+    "@vitejs/plugin-react": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vite": "^5.4.10",
+    "vite-plugin-singlefile": "^2.0.2"
+  },
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@react-three/drei": "^9.114.0",
+    "@react-three/fiber": "^8.17.10",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "three": "^0.169.0",
+    "zustand": "^4.5.5"
+  }
+}

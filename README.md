@@ -1,1 +1,107 @@
-# metro-digitaltwin
+# Metro İkizi · Adım 1–4: Veri modeli, simülasyon, 3B sahne, tıkla ve incele
+
+## Adım 4: Tıkla ve incele
+
+| Tıklanan | Panel |
+|---|---|
+| Tren | Sefer kodu, yön, uzunluk/kapasite, T-Centralen'de inen/binen, kalkış doluluğu, hat boyunca doluluk grafiği, trenin şu anki yeri |
+| Peronun bir yarısı | Bekleyen kişi, yoğunluk ve sınır, son 30 dakikanın grafiği, gelecek 3 tren ve doluluğu, trene sığmayacak yolcu |
+| Yürüyen merdiven | Perona inen ve perondan çıkan akış (kişi/dk) |
+| İstasyon tabelası | İstasyon verileri ve her değerin kaynağı (yayın / hesaplanmış / varsayım / sentetik) |
+
+Seçim Zustand'da (`selection`), hesaplar `app/twin/inspect.ts` içinde saf fonksiyonlar. Sürükleme tıklama sayılmaz; boşluğa tıklamak seçimi kaldırır.
+
+## Adım 3: 3B sahne (`app/`)
+
+React + React Three Fiber + Zustand. Unity ya da oyun motoru yok; tarayıcıda çalışır.
+
+```bash
+npm run dev     # geliştirme sunucusu
+npm run build   # tek dosya: dist/index.html ve dist/t-centralen-ikizi.html
+```
+
+| Klasör | Görevi |
+|---|---|
+| `app/twin/model.ts` | Veri setini kurar, simülasyonu plan × senaryo için bir kez çalıştırıp saklar |
+| `app/twin/layout.ts` | İstasyon ölçüleri veriden: peron uzunluğu/alanı, ray eksenleri, merdivenler |
+| `app/twin/selectors.ts` | Saf fonksiyonlar: t anında perondaki kişi, trenlerin konumu, sonraki tren |
+| `app/twin/store.ts` | Zaman, oynatma, hız, plan, senaryo (Zustand) |
+| `app/scene/` | Yalnızca çizim: istasyon, trenler, kalabalık + ısı haritası. İş mantığı yok |
+| `app/hud/` | Saat, kontroller, canlı okuma, lejant |
+
+Kural: sahne bileşenleri sayı hesaplamaz, `selectors.ts`'den okur. Veri modeli dosyalarına (`src/data`) dokunulmadı; motora yalnızca yön bazında kuyruk alanı (`queueAfter`) eklendi.
+
+Stockholm metrosu Kırmızı Hat T14 (Fruängen – Mörby centrum) için dijital ikizin veri katmanı. Arayüz yok; 3D sahne ve simülasyon yalnızca `buildDataset()` çıktısını okuyacak.
+
+## Çalıştırma
+
+```bash
+npm install
+npm run typecheck   # TypeScript tip kontrolü
+npm run validate    # veri modeli testleri + özet rapor
+npm run sim         # simülasyon testleri + plan karşılaştırma raporu
+```
+
+## Adım 2: Simülasyon motoru (`src/sim/`)
+
+Olay tabanlı, mezoskopik bir model. Bir günün tamamı yaklaşık 0,1 saniyede simüle ediliyor.
+
+1. **Tarife:** Sefer planından iki son duraktan kalkışlar üretilir. Trenler istasyonlar arası süre ve kapı açık süresiyle ilerler. 05:00'te trenler hat boyunca dağılmış olsun diye ilk seferler önceden başlar.
+2. **Peron:** Yolcular 30 saniyelik gruplar halinde perona gelir ve yönlerine göre sıraya girer (FIFO).
+3. **Tren gelince:** Önce o istasyonda inecekler iner, sonra sıradakiler kapasite dolana kadar biner. Binen yolcunun varış istasyonu talep modelindeki dağılıma göre belirlenir.
+4. **Kayıt:** Her binişte bekleme süresi, her durakta peron doluluğu ve tren yükü kaydedilir.
+
+`simulate(dataset, plan, { demandMultiplier, surges, boardingLimitFactor })`: `surges` belirli bir istasyon ve zamana ani kalabalık ekler (maç çıkışı gibi).
+
+### Ölçütler (`computeKpis`)
+
+| Ölçüt | Tanım |
+|---|---|
+| Dağılma süresi P90 (ana ölçüt) | Perona gelenlerin %90'ının trene binip perondan ayrılma süresi |
+| Ortalama bekleme | Yolcu başına peronda geçen ortalama süre |
+| En yüksek doluluk | Kalkışta tren yükü / kapasite (sınır %90) |
+| Peron yoğunluğu | Tren gelmeden hemen önce kişi/m² (sınır 2,0) |
+| Geride kalan | Trene sığamayıp bir sonrakini bekleyen yolcu (kişi-kez) |
+
+Ölçütler zaman penceresi ve istasyon bazında alınabilir. `slotSeries` 15 dakikalık seriler, `platformTrace` bir istasyonun peron doluluk izini verir; ikisi de grafikler için.
+
+### Testler
+
+Korunum (gelen = binen + bekleyen, binen = inen), kapasite aşılmaması, sınırsız kapasitede beklemenin sefer aralığını aşmaması, determinizm, sık seferin beklemeyi artırmaması, talep ×3 stres testi, ani kalabalık testleri.
+
+## Dosyalar
+
+| Dosya | İçerik |
+|---|---|
+| `src/types.ts` | Tüm tipler: hat, istasyon, peron, tren, talep, sefer planı, kısıtlar, ölçütler |
+| `src/data/sources.ts` | Kaynak listesi |
+| `src/data/line-t14.ts` | 19 istasyon, 18 bölüm, günlük binişler, peronlar, ortak gövde |
+| `src/data/fleet.ts` | C20 ünitesi (414 kişi), kısa/uzun tren, filo |
+| `src/data/time.ts` | 05:00–01:00 arası 80 adet 15 dakikalık dilim, gün içi talep eğrisi |
+| `src/data/demand.ts` | Dilim × istasyon × yön talebi ve varış istasyonu dağılımı |
+| `src/data/plans.ts` | Mevcut tarife, deneme planı, T13 trafiği, kısıtlar |
+| `scripts/validate.ts` | Testler |
+
+## Her sayının bir kaynağı var
+
+Her değer `{ value, src }` olarak tutulur. `src.kind` dört türden biridir:
+
+- `published`: resmi yayından (SL yıllık raporu, Wikipedia)
+- `derived`: yayınlanmış değerlerden hesaplanmış
+- `assumption`: varsayım, gerçek veriyle değiştirilmeli
+- `synthetic`: model tarafından üretilmiş
+
+## Talep nasıl üretiliyor?
+
+1. **Günlük biniş (yayın):** SL 2022 raporu. Aktarma istasyonlarında 2019 Kırmızı Hat değeri × 0,72 (2022/2019 metro toplam oranı).
+2. **T14 payı:** Ortak gövdede (Liljeholmen–Östermalmstorg) T13 ile eşit paylaşım, %50.
+3. **Gün içi dağılım (sentetik):** 08:00 ve 16:45 zirveli eğri.
+4. **Yön ve varış (çekim modeli):** Yolcu, her istasyona o istasyonun biniş sayısıyla orantılı olasılıkla gider.
+
+## Değiştirilmesi gereken başlıca varsayımlar
+
+- İstasyonlar arası süreler → Trafiklab GTFS tarifesi
+- Peron alanları → istasyon planları
+- Gün içi talep eğrisi → turnike verisi
+- Sabah/akşam yön dengesizliği → şu an yok, zirve yükü olduğundan düşük görünüyor
+- T14'e ayrılan filo, ünite sayıları
