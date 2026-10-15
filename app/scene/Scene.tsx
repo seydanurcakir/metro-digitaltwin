@@ -8,6 +8,7 @@ import { LAYOUT, useTwin } from '../twin/store';
 import { Station } from './Station';
 import { Trains } from './Trains';
 import { Crowd } from './Crowd';
+import { HoverGuard } from './interaction';
 
 const LIMIT_X = LAYOUT.hallHalfX + 30;
 const LIMIT_Z = 30;
@@ -73,6 +74,7 @@ export function Scene() {
       <Station />
       <Trains />
       <Crowd />
+      <HoverGuard />
     </Canvas>
   );
 }

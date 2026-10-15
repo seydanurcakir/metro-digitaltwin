@@ -1,4 +1,24 @@
-# Metro İkizi · Adım 1–4: Veri modeli, simülasyon, 3B sahne, tıkla ve incele
+# Metro İkizi
+
+Stockholm metrosu Kırmızı Hat T14 (Fruängen – Mörby centrum) için simülasyonla çalışan dijital ikiz. Ana ölçüt: **peron dağılma süresi**, yani perona gelenlerin %90'ının trene binip perondan ayrılma süresi.
+
+```bash
+npm install
+npm test        # veri modeli + simülasyon + uygulama testleri
+npm run dev     # 3B sahneyi tarayıcıda aç
+npm run build   # tek dosyalık sayfa: dist/
+```
+
+## Adım 5: Ölçütler, karşılaştırma, inceleme
+
+- **Ölçüt şeridi (üstte):** seçili planın içinde bulunulan 15 dakikadaki dağılma süresi, ortalama bekleme, peron yoğunluğu, vagon doluluğu ve hattaki tren sayısı; her biri diğer plana göre farkıyla.
+- **Karşılaştırma sekmesi:** zaman penceresi (bu 15 dk, sabah zirvesi, öğle, akşam zirvesi, akşam, tüm gün) ve kapsam (T-Centralen / tüm hat) filtreleri; 6 ölçütün tablosu; gün boyu dağılma süresi grafiği; içinde bulunulan dilimin sefer planı.
+- Tüm sayılar `app/twin/metrics.ts` üzerinden simülasyondan hesaplanır; elle yazılmış sayı yoktur.
+- Diğer plan ve senaryoların simülasyonu sayfa açıldıktan sonra boşta kalan zamanda önceden hesaplanır.
+- `scripts/test-app.ts`: sahnenin ve panellerin okuduğu fonksiyonların simülasyonla tutarlılığı, kare başına hesap maliyeti (60 FPS bütçesi).
+
+---
+
 
 ## Adım 4: Tıkla ve incele
 

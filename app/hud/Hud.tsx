@@ -5,6 +5,7 @@ import { fmtClock, fmtSecs, nextArrivals, platformAt } from '../twin/selectors';
 import { HEAT_STEPS } from '../scene/Crowd';
 import { C } from '../scene/palette';
 import { Inspector } from './Inspector';
+import { Compare, KpiStrip } from './Metrics';
 
 const fmtInt = (n: number) => Math.round(n).toLocaleString('tr-TR');
 const fmtDec = (n: number) => n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -14,6 +15,22 @@ const JUMPS: { label: string; hhmm: string; scenario: 'normal' | 'surge' }[] = [
   { label: 'Öğle', hhmm: '12:28', scenario: 'normal' },
   { label: 'Akşam kalabalığı', hhmm: '20:58', scenario: 'surge' },
 ];
+
+function Dock() {
+  const panel = useTwin((s) => s.panel);
+  const setPanel = useTwin.getState().setPanel;
+  return (
+    <section className="card dock">
+      <div className="tabs" role="tablist" aria-label="Paneller">
+        <button type="button" role="tab" id="tab-inspect" aria-selected={panel === 'inspect'} aria-controls="pane-body" onClick={() => setPanel('inspect')}>İnceleme</button>
+        <button type="button" role="tab" id="tab-compare" aria-selected={panel === 'compare'} aria-controls="pane-body" onClick={() => setPanel('compare')}>Karşılaştırma</button>
+      </div>
+      <div className="dock-body" id="pane-body" role="tabpanel" aria-labelledby={panel === 'inspect' ? 'tab-inspect' : 'tab-compare'}>
+        {panel === 'inspect' ? <Inspector /> : <Compare />}
+      </div>
+    </section>
+  );
+}
 
 export function Hud() {
   const sec = useTwin((s) => Math.floor(s.t));
@@ -31,6 +48,7 @@ export function Hud() {
 
   return (
     <div className="hud">
+      <div className="top-left">
       <section className="card brand" aria-label="İstasyon">
         <div className="line-badge" aria-hidden="true">T14</div>
         <div>
@@ -38,6 +56,8 @@ export function Hud() {
           <p className="muted">Röda linjen · Fruängen – Mörby centrum</p>
         </div>
       </section>
+        <KpiStrip />
+      </div>
 
       <div className="right-col">
       <section className="card controls" aria-label="Simülasyon">
@@ -79,7 +99,7 @@ export function Hud() {
         </p>
         <p className="hint">Sürükleyerek kaydırın · tekerlekle yakınlaştırın · sağ tuşla döndürün</p>
       </section>
-        <Inspector />
+        <Dock />
       </div>
 
       <section className="card live" aria-label="Canlı peron durumu">

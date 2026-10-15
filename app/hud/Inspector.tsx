@@ -17,7 +17,7 @@ const KIND_LABEL: Record<ProvenanceKind, string> = { published: 'Yayın', derive
 function Panel({ icon, title, sub, pill, pillTone = 'info', children }: { icon: ReactNode; title: string; sub: string; pill?: string; pillTone?: 'info' | 'ok' | 'warn'; children: ReactNode }) {
   const select = useTwin.getState().select;
   return (
-    <section className="card inspector" aria-label={`${title} ayrıntıları`}>
+    <section className="pane" aria-label={`${title} ayrıntıları`}>
       <header className="insp-head">
         <span className="insp-icon" aria-hidden="true">{icon}</span>
         <div className="insp-title">
@@ -234,7 +234,7 @@ export function Inspector() {
   const sel = useTwin((s) => s.selection);
   if (!sel) {
     return (
-      <section className="card inspector empty" aria-label="İnceleme">
+      <section className="pane empty" aria-label="İnceleme">
         <span className="insp-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M9 4 L9 14 L12 11 L15 17 L17 16 L14 10 L18 10 Z" /></svg></span>
         <p>Bir <strong>trene</strong>, <strong>peronun bir yarısına</strong>, <strong>yürüyen merdivene</strong> ya da <strong>istasyon tabelasına</strong> tıklayın.</p>
       </section>

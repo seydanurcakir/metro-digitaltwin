@@ -5,6 +5,7 @@ import { SERVICE_END_MIN } from '../../src/data/time';
 import { DATASET, FOCUS_STATION_ID, SCENARIOS, getResult, type ScenarioId } from './model';
 import { buildStationView, type StationView } from './selectors';
 import { buildLayout, type StationLayout } from './layout';
+import type { Scope, WindowId } from './metrics';
 
 export const SPEEDS = [1, 10, 30, 60] as const;
 export type Speed = (typeof SPEEDS)[number];
@@ -34,6 +35,11 @@ interface TwinState {
   view: StationView;
   selection: Selection;
   hover: boolean;
+  /** Karşılaştırma panelinin filtreleri */
+  compareWindow: WindowId;
+  compareScope: Scope;
+  /** Sağ paneldeki sekme */
+  panel: 'inspect' | 'compare';
   tick: (dtReal: number) => void;
   setPlaying: (p: boolean) => void;
   setSpeed: (s: Speed) => void;
@@ -41,6 +47,8 @@ interface TwinState {
   jumpTo: (hhmm: string, scenario?: ScenarioId) => void;
   select: (s: Selection) => void;
   setHover: (h: boolean) => void;
+  setCompare: (p: { window?: WindowId; scope?: Scope }) => void;
+  setPanel: (p: 'inspect' | 'compare') => void;
 }
 
 const END = SERVICE_END_MIN * 60;
@@ -56,6 +64,9 @@ export const useTwin = create<TwinState>((set, get) => ({
   view: makeView(initial, 'normal'),
   selection: null,
   hover: false,
+  compareWindow: 'day',
+  compareScope: 'station',
+  panel: 'inspect',
   tick: (dt) => {
     const { t, playing, speed } = get();
     if (!playing) return;
@@ -76,11 +87,13 @@ export const useTwin = create<TwinState>((set, get) => ({
     const sel = get().selection;
     set({ t: hhmmToSec(hhmm), scenario: sc, result: r, view: makeView(r, sc), selection: sel?.kind === 'train' ? null : sel });
   },
-  select: (selection) => set({ selection }),
+  select: (selection) => set(selection ? { selection, panel: 'inspect' } : { selection }),
   setHover: (hover) => {
     if (get().hover !== hover) {
       document.body.style.cursor = hover ? 'pointer' : '';
       set({ hover });
     }
   },
+  setPanel: (panel) => set({ panel }),
+  setCompare: ({ window, scope }) => set({ compareWindow: window ?? get().compareWindow, compareScope: scope ?? get().compareScope }),
 }));
