@@ -1,0 +1,13 @@
+# Netlify ayarları: depoyu Netlify'a bağlayınca bu değerler kendiliğinden kullanılır.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Önbellek: HTML her açılışta yenilensin
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

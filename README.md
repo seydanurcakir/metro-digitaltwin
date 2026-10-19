@@ -9,6 +9,16 @@ npm run dev     # 3B sahneyi tarayıcıda aç
 npm run build   # tek dosyalık sayfa: dist/
 ```
 
+## Canlıya alma (Netlify, ücretsiz)
+
+Depodaki `netlify.toml` gerekli ayarları içerir: derleme komutu `npm run build`, yayın klasörü `dist`, Node 20.
+
+1. [app.netlify.com](https://app.netlify.com) → **Add new project** → **Import an existing project** → **GitHub**
+2. `metro-digitaltwin` deposunu seçin; ayarlar dosyadan otomatik gelir → **Deploy**
+3. Site adını **Project configuration → Change project name** ile değiştirebilirsiniz (ör. `metro-ikizi.netlify.app`)
+
+Depoya her gönderimde site kendiliğinden yeniden derlenir.
+
 ## Adım 6: Optimizasyon (`src/opt/optimize.ts`)
 
 Her 15 dakikalık dilim için sefer aralığı (4 / 5 / 6 / 7,5 / 10 dk) ve tren uzunluğu (2 / 3 ünite) seçer.
