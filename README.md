@@ -1,5 +1,7 @@
 # Metro İkizi
 
+**Canlı demo: [metro-digitaltwin.netlify.app](https://metro-digitaltwin.netlify.app)**
+
 Stockholm metrosu Kırmızı Hat T14 (Fruängen – Mörby centrum) için simülasyonla çalışan dijital ikiz. Ana ölçüt: **peron dağılma süresi**, yani perona gelenlerin %90'ının trene binip perondan ayrılma süresi.
 
 ```bash
