@@ -39,6 +39,35 @@ export function trainPose(line: LineKey, trip: Trip, t: number): TrainPose | nul
   };
 }
 
+export interface CarPose {
+  x: number;
+  z: number;
+  yaw: number;
+}
+
+/**
+ * The train split into `n` equal cars, each placed and turned on the line at its own arc position,
+ * so the whole train bends with the track. `drawLength` may exceed the real length (minimum on-screen size).
+ */
+export function trainCars(line: LineKey, trip: Trip, centreS: number, drawLength: number, n: number, out: CarPose[]): number {
+  const L = LINES[line];
+  const side = trip.direction === 'north' ? 1 : -1;
+  // Cars ordered from the train's front to its back, in its direction of travel
+  const fwd = trip.direction === 'north' ? 1 : -1;
+  const car = drawLength / n;
+  for (let i = 0; i < n; i++) {
+    const s = centreS + fwd * (drawLength / 2 - car * (i + 0.5));
+    // Past either end of the line, continue straight along the end direction instead of piling up
+    const sc = Math.max(0, Math.min(L.al.length, s));
+    poseAt(L.al, sc, tmp);
+    const c = out[i] ?? (out[i] = { x: 0, z: 0, yaw: 0 });
+    c.x = tmp.x + tmp.dx * (s - sc) + tmp.dz * TRACK_OFFSET_M * side;
+    c.z = tmp.z + tmp.dz * (s - sc) - tmp.dx * TRACK_OFFSET_M * side;
+    c.yaw = Math.atan2(-tmp.dz, tmp.dx);
+  }
+  return car;
+}
+
 /** Trips of a result that are on the line at t (between first departure and last arrival) */
 export function activeTrips(trips: Trip[], t: number): Trip[] {
   return trips.filter((tr) => t >= tr.stops[0].t && t <= tr.stops[tr.stops.length - 1].t);

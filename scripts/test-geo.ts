@@ -1,5 +1,6 @@
 // Tests for the map layer: projection, tiles, line alignments and train kinematics.
 // Run: npm run test:geo
+import { SAMPLE_M } from '../src/geo/alignment';
 import {
   buildAlignment, buildCorridor, buildDataset, haversine, localToTile, motionModel, poseAt, simulate, tileOrigin, tileSizeM,
   toLatLon, toLocal, trainAt, ORIGIN, PLATFORM_AXIS, STATION_GEO, bearingToVec, type Alignment, type MotionModel, type SimResult,
@@ -72,12 +73,31 @@ for (const [al, name] of [[alT, 'T14'], [alC, 'commuter corridor']] as [Alignmen
   check(`${name}: arc length strictly increasing`, inc, `${(al.length / 1000).toFixed(1)} km`);
   check(`${name}: stations in order along the line`, al.stationArc.every((s, i) => i === 0 || s > al.stationArc[i - 1]));
 }
+for (const [al, name, line] of [[alT, 'T14', t14.line], [alC, 'commuter corridor', cor.ds.line]] as const) {
+  // Smooth curve: the direction changes only a little between consecutive samples (no corners)
+  let maxTurn = 0;
+  for (let i = 1; i < al.xs.length - 1; i++) {
+    const a = Math.atan2(al.zs[i] - al.zs[i - 1], al.xs[i] - al.xs[i - 1]);
+    const b = Math.atan2(al.zs[i + 1] - al.zs[i], al.xs[i + 1] - al.xs[i]);
+    let d = Math.abs(b - a);
+    if (d > Math.PI) d = 2 * Math.PI - d;
+    const len = Math.hypot(al.xs[i + 1] - al.xs[i], al.zs[i + 1] - al.zs[i]);
+    if (len > 1) maxTurn = Math.max(maxTurn, (d * 180) / Math.PI);
+  }
+  check(`${name}: no sharp corners (max turn between 12 m samples < 12°)`, maxTurn < 12, `${maxTurn.toFixed(1)}°`);
+  let onCurve = true;
+  line.stations.forEach((st, i) => {
+    const c = toLocal(STATION_GEO[st.id]), p = poseAt(al, al.stationArc[i]);
+    if (Math.hypot(p.x - c.x, p.z - c.z) > 1e-6) onCurve = false;
+  });
+  check(`${name}: every station lies exactly on the curve`, onCurve);
+}
 for (const [id, al] of [['t-centralen', alT], ['solna', alC]] as [string, Alignment][]) {
   const s = al.arcOf[id];
   const ax = PLATFORM_AXIS[id];
   const u = bearingToVec(ax.bearingDeg.value);
   let aligned = true;
-  for (const d of [-ax.straightHalfM + 5, -60, 0, 60, ax.straightHalfM - 5]) {
+  for (const d of [-ax.straightHalfM + SAMPLE_M + 1, -60, 0, 60, ax.straightHalfM - SAMPLE_M - 1]) {
     const p = poseAt(al, s + d);
     if (Math.abs(Math.abs(p.dx * u.x + p.dz * u.z) - 1) > 1e-9) aligned = false;
   }

@@ -7,7 +7,7 @@ import { buildStationView, platformAt, trainsAt, nextArrivals } from '../app/twi
 import { tripDetail, sideDetail, escalatorDetail } from '../app/twin/inspect';
 import { p90Series, planMetrics, solnaMetrics, trainsOnLine, verdict } from '../app/twin/metrics';
 import { LINES, TWINS, MAP_STATIONS, BOUNDS, type TwinDef } from '../app/twin/world';
-import { trainPose, TRACK_OFFSET_M } from '../app/twin/trainpose';
+import { trainCars, trainPose, TRACK_OFFSET_M, type CarPose } from '../app/twin/trainpose';
 
 let failed = 0;
 const check = (name: string, ok: boolean, detail = '') => {
@@ -105,6 +105,50 @@ for (const plan of UI_PLANS) {
     const k = cv.series[Math.floor((t8 - T0) / 900)];
     check('Solna KPI strip equals the station agent series', sm.p90WaitSec === k.p90WaitSec && sm.densityMax === k.densityMax);
   }
+}
+
+console.log('\n— Map trains follow the curved track');
+{
+  const r = getResult('current', 'normal');
+  const cv = getCorridor('current', 'normal');
+  const cars: CarPose[] = [];
+  let maxGapErr = 0, maxGapBig = 0, maxBend = 0, maxOff = 0, n = 0;
+  for (const [line, trips] of [['T14', r.trips], ['PENDEL', cv.result.trips]] as const) {
+    for (let t = hhmmToSec('06:00'); t < hhmmToSec('23:00'); t += 97) {
+      for (const trip of trips) {
+        const p = trainPose(line, trip, t);
+        if (!p) continue;
+        for (const drawLen of [p.length, 400]) { // real length and an enlarged far-zoom train
+          const carLen = trainCars(line, trip, p.s, drawLen, 6, cars);
+          for (let i = 1; i < 6; i++) {
+            const d = Math.hypot(cars[i].x - cars[i - 1].x, cars[i].z - cars[i - 1].z);
+            const err = Math.abs(d - carLen) / carLen;
+            if (drawLen === p.length) maxGapErr = Math.max(maxGapErr, err); else maxGapBig = Math.max(maxGapBig, err);
+            let b = Math.abs(cars[i].yaw - cars[i - 1].yaw);
+            if (b > Math.PI) b = 2 * Math.PI - b;
+            if (drawLen === p.length) maxBend = Math.max(maxBend, (b * 180) / Math.PI);
+          }
+          // Each car sits on its track: TRACK_OFFSET_M from the centre line, measured across the line
+          const al = LINES[line].al;
+          const sAt = (i: number) => p.s + (trip.direction === 'north' ? 1 : -1) * (drawLen / 2 - carLen * (i + 0.5));
+          for (const [i, c] of cars.entries()) {
+            if (sAt(i) < 0 || sAt(i) > al.length) continue; // extended straight past the end of the line
+            let best = Infinity;
+            for (let k = 0; k < al.xs.length; k += 1) best = Math.min(best, Math.hypot(al.xs[k] - c.x, al.zs[k] - c.z));
+            maxOff = Math.max(maxOff, best);
+          }
+          n++;
+        }
+      }
+      if (n > 3000) break;
+    }
+  }
+  // On a curve the inner track is shorter and the outer one longer than the centre line, so car spacing
+  // deviates by about offset / radius; anything beyond that would be a gap or an overlap
+  check('Cars stay coupled along the curve (spacing within 12% of car length)', Math.max(maxGapErr, maxGapBig) < 0.12,
+    `real length ${(maxGapErr * 100).toFixed(1)}%, enlarged ${(maxGapBig * 100).toFixed(1)}% over ${n / 2} trains`);
+  check('Neighbouring cars of a real-length train turn smoothly (< 25° between cars)', maxBend < 25, `${maxBend.toFixed(1)}°`);
+  check(`Every car stays on its track (≤ ${TRACK_OFFSET_M} m + sample spacing from the line)`, maxOff < TRACK_OFFSET_M + 7, `${maxOff.toFixed(1)} m`);
 }
 
 console.log('\n— General');
