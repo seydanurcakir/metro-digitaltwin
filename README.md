@@ -6,12 +6,33 @@ A simulation-driven digital twin of Stockholm's red metro line T14 (Fruängen �
 
 ```bash
 npm install
-npm test        # data model + simulation + app + optimiser + network + map + arena tests
+npm test        # data model + simulation + app + optimiser + network + geo + arena + street map tests
 npm run dev     # open the 3D map in the browser
 npm run build   # single-file page in dist/
 ```
 
+## Step 11: Seamless street map and rail clearance (preview)
+
+- **Street map everywhere.** The map is now a continuous dark street map covering the whole screen at every zoom level. It is drawn from OpenStreetMap vector tiles served by [OpenFreeMap](https://openfreemap.org) (free, no API key, no usage limits, OpenMapTiles schema). The tiles are rendered in the twin's own dark style (`app/map/style.ts`): water, parks and woodland, land use, roads by importance and rail. There is no text in the tiles, because the twin's labels sit on top. The tile level follows the zoom, and a coarser level stays underneath, so panning and zooming never show gaps or edges. The rectangular traced patch from Step 10 is gone.
+- **Real 3D buildings around Solna.** OpenStreetMap building footprints are extruded with their mapped heights (`app/map/buildings.ts`, `OsmBuildings.tsx`). This covers Solna, Arenastaden, Frösunda and the Brunnsviken shore. Heights taper towards the edge of the area, so the 3D buildings blend into the flat map. Named places (Mall of Scandinavia, Filmstaden, hotels) are tinted.
+- **Rail clearance buffer** (`app/map/clearance.ts`). No building or other static object may come within 25 m of any rail centre line: T14 and the commuter corridor, including the faded corridor ends. Station twins also get an exclusion box. The test uses the full footprint, not just the centre: a fast bounding-box prefilter, then exact edge-to-track distances. It applies to the real buildings, the stand-in blocks, landmark buildings (The Winery Hotel's stand-in box is moved 35 m off the line), the mall and the park trees. The arena model and the event walkway have their own exclusion zones. Before this step, three stand-in blocks at Ålkistan sat on the T14 tracks.
+- **Credit line.** OpenStreetMap's licence (ODbL) requires a credit, so a small one sits at the bottom of the map: "OpenFreeMap © OpenMapTiles · Data © OpenStreetMap contributors". It is a text credit, not an API watermark.
+- **Offline fallback.** If the tiles cannot be loaded (no network, a host that blocks external requests, `?tiles=off`), the plain dark ground with its grid remains, and the Step 10 stand-ins (traced mall, landmark boxes, blocks) are drawn instead, also kept clear of the rail buffer.
+
+The railway, stations, train paths and simulation are unchanged. Because the real tracks now show on the map, the known mismatch north of Solna is visible: the twin's commuter line runs up to about 500 m east of the real tracks towards Ulriksdal (see Step 10). Real buildings within 25 m of the twin's line there are left out until the line's shape is corrected.
+
+| File | Contents |
+|---|---|
+| `app/map/vector.ts` | Tile source (OpenFreeMap TileJSON), fetch, decode, cache |
+| `app/map/style.ts` | Dark map style drawn into canvas tiles (with over-zoom beyond zoom 14) |
+| `app/scene/BaseMap.tsx` | Tile layer: level of detail, seamless level changes, cache |
+| `app/map/clearance.ts` | Rail buffer and station boxes; footprint-to-track distances |
+| `app/map/buildings.ts`, `mesh.ts`, `app/scene/OsmBuildings.tsx` | Building extraction, clipping, exclusion, extrusion |
+| `scripts/test-map.ts`, `scripts/lib/mvt.ts` | Clearance, tile decoding and styling, building exclusion, wall normals; minimal MVT encoder for tests |
+
 ## Step 10: Solna and Frösunda environment (static layout)
+
+*(The flat traced layers of this step were replaced by the street map in Step 11; the traced data remains only for the offline stand-ins.)*
 
 The area around Solna station is now laid out from a reference map view (about 3.5 × 1.5 km, Råstasjön to Brunnsviken). Everything here is **static context**: no data streams, simulation metrics or APIs are attached. The railway, station logic and train paths are unchanged.
 

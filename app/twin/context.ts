@@ -5,7 +5,8 @@
 import type { XZ } from '../../src/index';
 import { toLocal } from '../../src/index';
 import MAP from './solna-map.json';
-import { ARENA, LINES, TWINS, WALKWAY } from './world';
+import { ARENA, TWINS, WALKWAY } from './world';
+import { RAIL_CLEAR_M, awayFromRail, boxCorners, railClash, railDistance } from '../map/clearance';
 import { rng } from './selectors';
 
 export interface Area {
@@ -109,7 +110,22 @@ export const LANDMARKS: Landmark[] = [
   { id: 'kolonnvagen', name: 'Kolonnvägen', kind: 'road', pos: fromPx(413, 100), note: MAP_NOTE },
 ];
 
-export const LANDMARK_BUILDINGS: (Footprint & { id: string })[] = LANDMARKS.filter((l) => l.building).map((l) => ({ id: l.id, ...l.building! }));
+/** Push a footprint straight away from the nearest track until it clears the rail buffer (and the station
+ * boxes); `movedM` records how far. Used for landmark buildings whose map position falls inside the buffer. */
+function clearOfRail(f: Footprint): Footprint & { movedM: number } {
+  if (!railClash(boxCorners(f))) return { ...f, movedM: 0 };
+  const dir = awayFromRail(f);
+  for (let m = 5; dir && m <= 300; m += 5) {
+    const g = { ...f, x: f.x + dir.x * m, z: f.z + dir.z * m };
+    if (!railClash(boxCorners(g))) return { ...g, movedM: m };
+  }
+  return { ...f, movedM: NaN };
+}
+
+/** Landmark buildings, kept clear of the railway (see clearOfRail); dropped if they cannot be cleared */
+export const LANDMARK_BUILDINGS: (Footprint & { id: string; movedM: number })[] = LANDMARKS.filter((l) => l.building)
+  .map((l) => ({ id: l.id, ...clearOfRail(l.building!) }))
+  .filter((b) => Number.isFinite(b.movedM));
 
 /** Vasalundsparken: the traced park outline that contains the published park point */
 export const PARK = SOLNA_MAP.green.find((g) => inPolygon(LANDMARKS.find((l) => l.id === 'vasalundsparken')!.pos, g.pts)) ?? null;
@@ -137,22 +153,19 @@ const inEllipse = (p: XZ, c: XZ, rx: number, rz: number, a: number, pad: number)
 };
 
 /** Clearances (m) that keep generated blocks off the twin's own features; exported for the tests */
-export const CLEAR = { rail: 55, arena: 45, walkway: 30, landmark: 30 };
+export const CLEAR = { rail: RAIL_CLEAR_M, arena: 45, walkway: 30, landmark: 30 };
 
-const railPts = (() => {
-  const al = LINES.PENDEL.al;
-  return Array.from({ length: al.xs.length }, (_, i) => ({ x: al.xs[i], z: al.zs[i] }));
-})();
-
-/** Why a block cannot stand here (or null): checks the twin's railway, arena, walkway, landmark buildings and the map */
+/** Why a block cannot stand here (or null): checks the rail buffer of every line and the station twins, then
+ * the arena, walkway, mall, landmark buildings and the map */
 export function blockClashes(f: Footprint): string | null {
+  const rail = railClash(boxCorners(f));
+  if (rail) return rail;
   const hw = f.w / 2, hd = f.d / 2;
   const pts = [{ x: 0, z: 0 }, { x: hw, z: hd }, { x: -hw, z: hd }, { x: hw, z: -hd }, { x: -hw, z: -hd }].map((o) => {
     const r = rot(o.x, o.z, f.rotY);
     return { x: f.x + r.x, z: f.z + r.z };
   });
   for (const p of pts) {
-    if (distToPolyline(p, railPts) < CLEAR.rail) return 'rail';
     if (inEllipse(p, ARENA.pos, ARENA.a, ARENA.b, ARENA.rotY, CLEAR.arena)) return 'arena';
     if (distToPolyline(p, WALKWAY) < CLEAR.walkway) return 'walkway';
     if (MALL.footprint.length && inPolygon(p, MALL.footprint)) return 'mall';
@@ -192,7 +205,7 @@ export const TREES: XZ[] = (() => {
   const out: XZ[] = [];
   for (let k = 0; k < 4000 && out.length < 70; k++) {
     const p = { x: x0 + r() * (x1 - x0), z: z0 + r() * (z1 - z0) };
-    if (inPolygon(p, PARK.pts) && distToPolyline(p, WALKWAY) > 15) out.push(p);
+    if (inPolygon(p, PARK.pts) && distToPolyline(p, WALKWAY) > 15 && railDistance(p) > RAIL_CLEAR_M) out.push(p);
   }
   return out;
 })();

@@ -56,6 +56,19 @@ function Places() {
   );
 }
 
+/** Required credit for the street map data (OpenStreetMap, ODbL) and its tiles (OpenMapTiles via OpenFreeMap) */
+function MapCredit() {
+  const basemap = useTwin((s) => s.basemap);
+  if (basemap === 'off') return null;
+  return (
+    <p className={`map-credit ${basemap}`} aria-live="polite">
+      {basemap === 'unavailable'
+        ? 'Street map unavailable here · network drawn on a 500 m grid'
+        : <><a href="https://openfreemap.org" target="_blank" rel="noreferrer">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noreferrer">OpenMapTiles</a> · Data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors</>}
+    </p>
+  );
+}
+
 export function Hud() {
   const sec = useTwin((s) => Math.floor(s.t));
   const playing = useTwin((s) => s.playing);
@@ -76,6 +89,7 @@ export function Hud() {
 
   return (
     <div className="hud">
+      <MapCredit />
       <div className="top-left">
         <section className="card brand" aria-label="Station">
           <div className="brand-row">

@@ -9,13 +9,14 @@
     "dev": "vite",
     "build": "vite build && node scripts/to-artifact.mjs",
     "test:app": "tsx scripts/test-app.ts",
-    "test": "tsx scripts/validate.ts && tsx scripts/test-sim.ts && tsx scripts/test-app.ts && tsx scripts/test-opt.ts && tsx scripts/test-network.ts && tsx scripts/test-geo.ts && tsx scripts/test-arena.ts",
+    "test": "tsx scripts/validate.ts && tsx scripts/test-sim.ts && tsx scripts/test-app.ts && tsx scripts/test-opt.ts && tsx scripts/test-network.ts && tsx scripts/test-geo.ts && tsx scripts/test-arena.ts && tsx scripts/test-map.ts",
     "optimize": "tsx scripts/optimize.ts",
     "test:opt": "tsx scripts/test-opt.ts",
     "solna": "tsx scripts/solna.ts",
     "test:network": "tsx scripts/test-network.ts",
     "test:geo": "tsx scripts/test-geo.ts",
-    "test:arena": "tsx scripts/test-arena.ts"
+    "test:arena": "tsx scripts/test-arena.ts",
+    "test:map": "tsx scripts/test-map.ts"
   },
   "keywords": [],
   "author": "",
@@ -34,8 +35,10 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@mapbox/vector-tile": "3.0.0",
     "@react-three/drei": "^9.114.0",
     "@react-three/fiber": "^8.17.10",
+    "pbf": "5.1.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "^0.169.0",

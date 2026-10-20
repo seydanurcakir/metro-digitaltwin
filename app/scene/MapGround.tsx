@@ -1,5 +1,5 @@
-// Map ground: a plain dark surface with a faint metric grid (500 m minor, 2.5 km major). No external map
-// service is used; the rail network, stations and trains are drawn from the twin's own data on top of it.
+// Map ground: a plain dark surface with a faint metric grid (500 m minor, 2.5 km major). The street map
+// (BaseMap.tsx) covers it wherever its tiles have loaded; offline, the grid alone remains as the reference.
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { MAP_GROUND } from './palette';
@@ -13,6 +13,7 @@ function useGrid(divisions: number, color: string, y: number) {
     g.position.y = y;
     const m = g.material as THREE.Material;
     m.depthWrite = false;
+    g.renderOrder = -3.99; // under the street map tiles
     g.raycast = () => {};
     return g;
   }, [divisions, color, y]);

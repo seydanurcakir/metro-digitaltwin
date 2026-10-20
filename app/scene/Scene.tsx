@@ -1,4 +1,4 @@
-// 3D map scene: orthographic camera over a geographic ground, the rail network with live trains, and the
+// 3D map scene: orthographic camera over a seamless street map, the rail network with live trains, and the
 // two station twins placed at their real positions. Drag to pan, wheel to zoom, right-drag to rotate.
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
@@ -18,6 +18,8 @@ import { StationLabels } from './StationLabels';
 import { Arena } from './Arena';
 import { Walkway } from './Walkway';
 import { Context } from './Context';
+import { BaseMap } from './BaseMap';
+import { OsmBuildings } from './OsmBuildings';
 import { HoverGuard } from './interaction';
 import { CAM, LOD } from './cam';
 
@@ -225,7 +227,9 @@ export function Scene() {
       <hemisphereLight args={['#FFFFFF', '#8A939C', 1.1]} />
       <Sun />
       <MapGround />
+      <BaseMap />
       <Context />
+      <OsmBuildings />
       <NetworkLines />
       <Walkway />
       <Arena />

@@ -202,6 +202,15 @@ h2 { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.2; }
 .schedule li .muted { grid-column: 2; font-size: 12px; }
 .schedule li.on { color: var(--accent); font-weight: 600; }
 
+/* Street map credit (required attribution; small, bottom of the map) */
+.map-credit {
+  position: absolute; right: 392px; bottom: 6px; margin: 0; padding: 2px 7px; border-radius: 5px; pointer-events: auto;
+  font-size: 10.5px; line-height: 1.4; color: #7F8FA0; background: rgba(13, 19, 26, 0.6);
+}
+.map-credit a { color: inherit; text-decoration: none; }
+.map-credit a:hover { color: #C9D4DF; text-decoration: underline; }
+.map-credit.unavailable { color: var(--chip-warn-fg); background: var(--chip-warn-bg); }
+
 /* Map labels */
 .map-label {
   /* Labels sit on the dark map in both themes, so they use fixed dark-map colours */
@@ -289,5 +298,6 @@ h2 { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.2; }
     padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   .card { position: static; width: auto; }
   .controls { width: auto; }
+  .map-credit { position: absolute; top: calc(56vh - 26px); right: 8px; bottom: auto; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

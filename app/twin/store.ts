@@ -32,6 +32,8 @@ export interface CameraCommand {
 }
 
 export type PanelId = 'inspect' | 'compare' | 'network';
+/** Street map under the network: loading, shown, switched off (?tiles=off) or unreachable (offline, blocked host) */
+export type BasemapStatus = 'loading' | 'ok' | 'off' | 'unavailable';
 
 export interface LineData {
   ds: TwinDataset;
@@ -59,6 +61,7 @@ interface TwinState {
   compareWindow: WindowId;
   compareScope: Scope;
   panel: PanelId;
+  basemap: BasemapStatus;
   tick: (dtReal: number) => void;
   setPlaying: (p: boolean) => void;
   setSpeed: (s: Speed) => void;
@@ -76,6 +79,7 @@ interface TwinState {
   setFollow: (f: { line: LineKey; tripId: number } | null) => void;
   setCompare: (p: { window?: WindowId; scope?: Scope }) => void;
   setPanel: (p: PanelId) => void;
+  setBasemap: (b: BasemapStatus) => void;
 }
 
 const END = SERVICE_END_MIN * 60;
@@ -125,6 +129,7 @@ export const useTwin = create<TwinState>((set, get) => ({
   compareWindow: 'day',
   compareScope: 'station',
   panel: 'inspect',
+  basemap: 'loading',
   tick: (dt) => {
     const { t, playing, speed } = get();
     if (!playing) return;
@@ -184,5 +189,6 @@ export const useTwin = create<TwinState>((set, get) => ({
   },
   setFollow: (follow) => set({ follow }),
   setPanel: (panel) => set({ panel }),
+  setBasemap: (basemap) => { if (get().basemap !== basemap) set({ basemap }); },
   setCompare: ({ window, scope }) => set({ compareWindow: window ?? get().compareWindow, compareScope: scope ?? get().compareScope }),
 }));
