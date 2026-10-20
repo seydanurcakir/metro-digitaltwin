@@ -62,12 +62,6 @@ export const SOURCES: SourceRef[] = [
     note: 'Coordinates taken from the infobox of each station article (retrieved October 2026).',
   },
   {
-    id: 'basemap',
-    title: 'Basemap – © OpenStreetMap contributors, © CARTO',
-    url: 'https://carto.com/attributions',
-    note: 'Raster street map loaded in the browser at run time. Only for context; no model value depends on it.',
-  },
-  {
     id: 'assumption',
     title: 'Model assumption',
     note: 'No published value found; a reasonable starting value to be replaced with operator data.',

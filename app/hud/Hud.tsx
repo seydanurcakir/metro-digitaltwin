@@ -51,16 +51,6 @@ function Places() {
   );
 }
 
-function MapCredit() {
-  const basemap = useTwin((s) => s.basemap);
-  const text =
-    basemap === 'ok' ? <>Basemap © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a></>
-    : basemap === 'loading' ? 'Loading street basemap…'
-    : basemap === 'off' ? 'Street basemap off · 1 km grid'
-    : 'Street basemap unavailable here · network drawn on a 1 km grid';
-  return <p className={`map-credit ${basemap}`} aria-live="polite">{text}</p>;
-}
-
 export function Hud() {
   const sec = useTwin((s) => Math.floor(s.t));
   const playing = useTwin((s) => s.playing);
@@ -81,7 +71,6 @@ export function Hud() {
 
   return (
     <div className="hud">
-      <MapCredit />
       <div className="top-left">
         <section className="card brand" aria-label="Station">
           <div className="brand-row">

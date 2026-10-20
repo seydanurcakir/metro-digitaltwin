@@ -11,7 +11,7 @@ import { trainPose } from '../twin/trainpose';
 import { Station } from './Station';
 import { Trains } from './Trains';
 import { Crowd } from './Crowd';
-import { MapGround } from './MapTiles';
+import { MapGround } from './MapGround';
 import { NetworkLines } from './NetworkLines';
 import { NetworkTrains } from './NetworkTrains';
 import { StationLabels } from './StationLabels';

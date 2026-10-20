@@ -15,7 +15,7 @@ npm run build   # single-file page in dist/
 
 The isolated 3D scene is now a navigable map of the network.
 
-- **Geographic map.** Everything is placed in one metric frame centred on T-Centralen (Web Mercator scaled by cos 59.33°, so slippy-map tiles stay square and distances are true to ~0.1%). Pan, zoom from a single platform out to the whole network, rotate and tilt. A street basemap (© OpenStreetMap contributors, © CARTO) is loaded by the browser at run time; where external images are blocked the network is drawn on a plain 1 km grid and the page says so.
+- **Geographic map.** Everything is placed in one metric frame centred on T-Centralen (Web Mercator scaled by cos 59.33°, so distances are true to ~0.1%). Pan, zoom from a single platform out to the whole network, rotate and tilt. There is no external map service: the lines, stations and trains are drawn from the twin's own data on a dark ground with a faint 500 m / 2.5 km grid.
 - **Station coordinates** come from each station's Wikipedia article and carry provenance like every other value (`src/geo/geodata.ts`). Stockholm City has no published coordinates and is marked as an assumption.
 - **Two full 3D twins.** T-Centralen (underground: back wall, mezzanines, tunnels) and **Solna** (surface: island platform under a glass canopy, footbridges with gates, escalators, overhead line). Both have the same functions: live crowd and heat map, detailed trains with doors and roof load bars, clickable platform halves, escalators and station signs. The camera flies between them, and moving the map close to a twin makes it the focus of the dashboard.
 - **Live trains on the map.** Every simulated T14 and commuter train moves along its line in real time. A shared kinematics module (`src/geo/motion.ts`, trapezoidal speed profile between timetable stops) drives both the map trains and the trains inside the twins, so a train leaves a station model and continues on the map without a jump. Click any train to inspect it, or **follow** it with the camera.
@@ -24,16 +24,14 @@ The isolated 3D scene is now a navigable map of the network.
 
 | File | Contents |
 |---|---|
-| `src/geo/projection.ts` | Local metric projection, tile maths, bearings |
+| `src/geo/projection.ts` | Local metric projection, bearings |
 | `src/geo/geodata.ts` | Station coordinates, platform axes of the twins, schematic shape points |
 | `src/geo/alignment.ts` | Line polylines with arc length; straight sections through the twins |
 | `src/geo/motion.ts` | Train position at any time t from the simulated timetable |
 | `app/twin/world.ts` | Lines, the two twins (layout, position, orientation), map stations, camera presets |
-| `app/scene/MapTiles.tsx` | Basemap tiles with level of detail and the fallback ground |
+| `app/scene/MapGround.tsx` | Dark map ground with a metric grid |
 | `app/scene/NetworkLines.tsx`, `NetworkTrains.tsx`, `StationLabels.tsx` | Lines, live trains and station labels on the map |
-| `scripts/test-geo.ts` | Projection vs. great-circle distances, tile numbers vs. the OSM formula, alignments, train kinematics |
-
-URL options: `?tiles=off` hides the basemap; `?tiles=<url with {z}/{x}/{y}>` uses another tile server.
+| `scripts/test-geo.ts` | Projection vs. great-circle distances, alignments, train kinematics |
 
 ## Step 7: Network layer and Solna station (`src/network/`)
 

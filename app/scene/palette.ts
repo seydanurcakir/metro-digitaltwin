@@ -43,8 +43,10 @@ export const C = {
 
 export const loadColor = (lf: number) => (lf >= 0.9 ? C.load.full : lf >= 0.75 ? C.load.busy : C.load.ok);
 
-/** Map ground and grid when no street basemap is available */
+/** Dark map ground, grid and the casing drawn under the line colours */
 export const MAP_GROUND = {
-  light: { ground: '#E7EBEE', grid: '#D3D9DE', casing: '#FFFFFF' },
-  dark: { ground: '#18202A', grid: '#24303B', casing: '#0E141A' },
+  ground: '#0D131A',
+  gridMinor: '#151E27',
+  gridMajor: '#1D2935',
+  casing: '#0D131A',
 } as const;

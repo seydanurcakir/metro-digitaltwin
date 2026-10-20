@@ -192,30 +192,26 @@ h2 { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.2; }
 .btn.small.primary { min-width: 0; }
 .insp-icon.commuter { color: var(--commuter); }
 
-/* Map labels and basemap credit */
-.map-credit {
-  position: absolute; right: 392px; bottom: 8px; margin: 0; padding: 3px 8px; border-radius: 6px; pointer-events: auto;
-  font-size: 11.5px; color: var(--muted); background: color-mix(in srgb, var(--panel) 82%, transparent);
-}
-.map-credit a { color: inherit; }
-.map-credit.unavailable { color: var(--chip-warn-fg); background: var(--chip-warn-bg); }
+/* Map labels */
 .map-label {
+  /* Labels sit on the dark map in both themes, so they use fixed dark-map colours */
+  --map-bg: #0D131A; --map-fg: #E7ECF1; --map-metro: #E5574D; --map-commuter: #EE7FA9;
   display: inline-flex; align-items: center; gap: 5px; transform: translate(-7px, -50%); padding: 0; border: 0; background: none;
-  font: 600 12.5px/1 var(--font-ui); color: var(--fg); white-space: nowrap; cursor: pointer; user-select: none;
+  font: 600 12.5px/1 var(--font-ui); color: var(--map-fg); white-space: nowrap; cursor: pointer; user-select: none;
 }
-.map-label .dot { width: 12px; height: 12px; flex: 0 0 auto; border-radius: 50%; background: var(--panel); border: 3px solid var(--line); box-shadow: 0 0 0 1.5px var(--panel); }
-.map-label.commuter .dot { border-color: var(--commuter); }
-.map-label .name { padding: 2px 5px; border-radius: 5px; background: color-mix(in srgb, var(--panel) 86%, transparent); box-shadow: 0 1px 2px rgba(16, 26, 38, 0.18); }
+.map-label .dot { width: 12px; height: 12px; flex: 0 0 auto; border-radius: 50%; background: var(--map-bg); border: 3px solid var(--map-metro); box-shadow: 0 0 0 1.5px var(--map-bg), 0 0 10px color-mix(in srgb, var(--map-metro) 55%, transparent); }
+.map-label.commuter .dot { border-color: var(--map-commuter); box-shadow: 0 0 0 1.5px var(--map-bg), 0 0 10px color-mix(in srgb, var(--map-commuter) 55%, transparent); }
+.map-label .name { padding: 2px 6px; border-radius: 5px; background: rgba(13, 19, 26, 0.78); border: 1px solid rgba(231, 236, 241, 0.12); }
 .map-label.minor .name { font-weight: 500; font-size: 11.5px; }
 .map-label.twin .dot { width: 16px; height: 16px; }
 .map-label.twin .name { font-size: 13.5px; }
-.map-label .badge { font: 600 10.5px/1 var(--font-ui); color: #FFFFFF; background: var(--accent); border-radius: 4px; padding: 3px 4px; }
-.map-label.commuter.twin .badge { background: var(--commuter); }
+.map-label .badge { font: 600 10.5px/1 var(--font-ui); color: #FFFFFF; background: #2E6FE0; border-radius: 4px; padding: 3px 4px; }
+.map-label.commuter.twin .badge { background: #C2477A; }
 .map-label.left { flex-direction: row-reverse; transform: translate(calc(-100% + 7px), -50%); }
 .map-label.boundary { cursor: default; opacity: 0.75; }
 .map-label.boundary .dot { border-style: dotted; }
-.map-label:hover .name, .map-label:focus-visible .name { color: var(--accent); }
-.map-label:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.map-label:hover .name, .map-label:focus-visible .name { color: #9DBBFF; border-color: rgba(157, 187, 255, 0.5); }
+.map-label:focus-visible { outline: 2px solid #9DBBFF; outline-offset: 2px; border-radius: 6px; }
 .stage[data-lod="far"] .map-label.minor .name { display: none; }
 .stage[data-lod="close"] .map-label.twin { display: none; }
 
@@ -265,6 +261,5 @@ h2 { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.2; }
     padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   .card { position: static; width: auto; }
   .controls { width: auto; }
-  .map-credit { position: absolute; top: calc(56vh - 30px); right: 8px; bottom: auto; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

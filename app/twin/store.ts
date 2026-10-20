@@ -30,7 +30,6 @@ export interface CameraCommand {
   polar?: number;
 }
 
-export type BasemapStatus = 'loading' | 'ok' | 'off' | 'unavailable';
 export type PanelId = 'inspect' | 'compare' | 'network';
 
 export interface LineData {
@@ -56,7 +55,6 @@ interface TwinState {
   hover: boolean;
   follow: { line: LineKey; tripId: number } | null;
   camera: CameraCommand | null;
-  basemap: BasemapStatus;
   compareWindow: WindowId;
   compareScope: Scope;
   panel: PanelId;
@@ -71,7 +69,6 @@ interface TwinState {
   flyTo: (x: number, z: number, zoom: number, azimuth?: number, polar?: number) => void;
   overview: () => void;
   setFollow: (f: { line: LineKey; tripId: number } | null) => void;
-  setBasemap: (b: BasemapStatus) => void;
   setCompare: (p: { window?: WindowId; scope?: Scope }) => void;
   setPanel: (p: PanelId) => void;
 }
@@ -120,7 +117,6 @@ export const useTwin = create<TwinState>((set, get) => ({
   hover: false,
   follow: null,
   camera: null,
-  basemap: 'loading',
   compareWindow: 'day',
   compareScope: 'station',
   panel: 'inspect',
@@ -169,7 +165,6 @@ export const useTwin = create<TwinState>((set, get) => ({
     set({ follow: null, camera: { seq: ++seq, x: OVERVIEW.x + shift, z: OVERVIEW.z, zoom: OVERVIEW.zoom, azimuth: 0, polar: 0.38 } });
   },
   setFollow: (follow) => set({ follow }),
-  setBasemap: (basemap) => { if (get().basemap !== basemap) set({ basemap }); },
   setPanel: (panel) => set({ panel }),
   setCompare: ({ window, scope }) => set({ compareWindow: window ?? get().compareWindow, compareScope: scope ?? get().compareScope }),
 }));
