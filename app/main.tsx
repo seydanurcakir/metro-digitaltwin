@@ -6,6 +6,7 @@ import { useTwin } from './twin/store';
 import { SCENARIO_IDS, UI_PLANS, getResult } from './twin/model';
 import { p90Series } from './twin/metrics';
 import { getCorridor } from './twin/network';
+import { removeHostingBadges } from './hosting-badge';
 import './styles.css';
 
 /** Advances the simulation clock (real time × speed) */
@@ -64,6 +65,8 @@ function App() {
     </div>
   );
 }
+
+removeHostingBadges();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

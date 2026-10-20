@@ -56,7 +56,7 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); fon
 .brand { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; max-width: 372px; }
 .brand-row { display: flex; align-items: center; gap: 12px; }
 .right-col {
-  position: absolute; top: 16px; bottom: 16px; right: max(16px, env(safe-area-inset-right, 0px)); width: 360px;
+  position: absolute; top: 16px; bottom: 72px; /* clear of the developer badge */ right: max(16px, env(safe-area-inset-right, 0px)); width: 360px;
   display: flex; flex-direction: column; gap: 12px; pointer-events: none;
 }
 .right-col > .card { position: relative; }
@@ -202,6 +202,44 @@ h2 { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.2; }
 .schedule li .muted { grid-column: 2; font-size: 12px; }
 .schedule li.on { color: var(--accent); font-weight: 600; }
 
+/* Developer badge (bottom-right). Solid, opaque background so nothing underneath can show through. */
+.dev-badge {
+  position: fixed; bottom: 12px; right: 12px; z-index: 99999;
+  display: inline-flex; align-items: center; gap: 12px; min-height: 46px; padding: 8px 18px 8px 16px; box-sizing: border-box;
+  background-color: #0d1117; opacity: 1; border: 0; border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45); text-decoration: none; isolation: isolate;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+/* Square, opaque underlay: the rounded corners leave no gap for anything underneath to show through */
+.dev-badge::before { content: ""; position: absolute; inset: 0; z-index: -1; background-color: #0d1117; }
+/* Hairline frame drawn above the underlay */
+.dev-badge::after {
+  content: ""; position: absolute; inset: 0; border-radius: 8px; pointer-events: none;
+  border: 1px solid rgba(100, 210, 255, 0.24); transition: border-color 0.25s ease;
+}
+.dev-badge:hover, .dev-badge:focus-visible {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), 0 0 24px rgba(100, 210, 255, 0.45);
+  transform: translateY(-1px);
+}
+.dev-badge:hover::after, .dev-badge:focus-visible::after { border-color: rgba(100, 210, 255, 0.65); }
+.dev-badge:focus-visible { outline: 2px solid rgba(100, 210, 255, 0.9); outline-offset: 3px; }
+.dev-by {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px; letter-spacing: 0.04em; color: #8B949E; white-space: nowrap;
+}
+.dev-sig {
+  font-family: 'Great Vibes', 'Segoe Script', 'Brush Script MT', cursive;
+  font-size: 27px; line-height: 1; color: #FFFFFF; white-space: nowrap; padding-top: 2px; word-spacing: 0.14em;
+  text-shadow: 0 0 8px rgba(100, 210, 255, 0.8), 0 0 16px rgba(100, 210, 255, 0.4);
+}
+.dev-badge:hover .dev-sig { text-shadow: 0 0 10px rgba(100, 210, 255, 0.95), 0 0 22px rgba(100, 210, 255, 0.55); }
+
+/* Hosting badges (e.g. "Powered by Netlify") are hidden wherever they can be reached from the page */
+#netlify-badge, .netlify-badge, [class*="netlify-badge" i], [id*="netlify-badge" i], netlify-badge,
+a[href*="netlify.com"][class*="badge" i], img[src*="netlify"][alt*="netlify" i], .powered-by-netlify, [data-netlify-badge] {
+  display: none !important; opacity: 0 !important; visibility: hidden !important; pointer-events: none !important;
+}
+
 /* Street map credit (required attribution; small, bottom of the map) */
 .map-credit {
   position: absolute; right: 392px; bottom: 6px; margin: 0; padding: 2px 7px; border-radius: 5px; pointer-events: auto;
@@ -299,5 +337,9 @@ h2 { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.2; }
   .card { position: static; width: auto; }
   .controls { width: auto; }
   .map-credit { position: absolute; top: calc(56vh - 26px); right: 8px; bottom: auto; }
+  .hud { padding-bottom: 76px; } /* last card scrolls clear of the developer badge */
+  .dev-badge { min-height: 40px; padding: 6px 14px 6px 12px; gap: 9px; }
+  .dev-by { font-size: 10px; }
+  .dev-sig { font-size: 23px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
