@@ -11,14 +11,14 @@ export * from './types';
 export { trainCapacity, unitCapacity } from './data/fleet';
 export { SLOTS, slotIndexAt, minToLabel } from './data/time';
 
-/** Tüm veri setini kurar. Simülasyon ve 3D sahne yalnızca bunu okur. */
+/** Builds the full dataset. The simulation and the 3D scene only read this. */
 export function buildDataset(): TwinDataset {
   const profile = buildWeekdayProfile();
   return {
     line: LINE_T14,
     fleet: FLEET,
     demand: buildDemand(LINE_T14, profile),
-    // Önerilen planlar scripts/optimize.ts ile üretilir (npm run optimize)
+    // Recommended plans are produced by scripts/optimize.ts (npm run optimize)
     plans: [CURRENT_PLAN, SAMPLE_CANDIDATE, ...(optimizedPlans as ServicePlan[])],
     otherLine: T13_ON_TRUNK,
     constraints: CONSTRAINTS,
@@ -26,14 +26,14 @@ export function buildDataset(): TwinDataset {
   };
 }
 
-/** Bir turun süresi (dk): iki yön yolculuk + bekleme + iki son durak dönüşü */
+/** Duration of one round trip (min): both directions incl. dwell + turnaround at both terminals */
 export function cycleTimeMin(line: Line): number {
   const run = line.segments.reduce((a, s) => a + s.runTimeSec.value, 0);
   const dwell = line.stations.filter((s) => !s.isTerminal).reduce((a, s) => a + s.dwellSec.value, 0);
   return (2 * (run + dwell) + 2 * line.turnaroundSec.value) / 60;
 }
 
-/** Planın bir dilimde gerektirdiği ünite sayısı */
+/** Units a plan needs in one slot */
 export function unitsRequired(line: Line, plan: ServicePlan, slotIndex: number): number {
   const p = plan.slots[slotIndex];
   return Math.ceil(cycleTimeMin(line) / p.headwayMin) * p.unitsPerTrain;
@@ -49,3 +49,10 @@ export { buildCorridor, buildStockholmNetwork, transferStream, TC_ID, CITY_ID, S
 export type { Corridor, TransferStream } from './network/integration';
 export { StationAgent } from './network/station-agent';
 export type { StationState, SlotKpi } from './network/station-agent';
+export { ORIGIN, toLocal, toLatLon, tileSizeM, localToTile, tileOrigin, bearingToVec, haversine } from './geo/projection';
+export type { LatLon, XZ } from './geo/projection';
+export { STATION_GEO, PLATFORM_AXIS, SHAPE_POINTS } from './geo/geodata';
+export { buildAlignment, poseAt, slice } from './geo/alignment';
+export type { Alignment, Pose } from './geo/alignment';
+export { motionModel, trainAt, trainLength, stopOffset, runProfile } from './geo/motion';
+export type { MotionModel, TrainAt } from './geo/motion';

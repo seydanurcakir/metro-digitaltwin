@@ -1,8 +1,8 @@
-// Ölçüt şeridi ve plan karşılaştırması. Tüm sayılar metrics.ts üzerinden simülasyondan hesaplanır.
+// KPI strip and plan comparison. Every number is computed from the simulation via metrics.ts.
 import { useTwin } from '../twin/store';
 import { DATASET, SCENARIOS, planLabel, resolvePlan } from '../twin/model';
 import {
-  METRIC_ROWS, WINDOWS, fmtDec, p90Series, planMetrics, slotIndexOf, trainsOnLine, verdict, windowRange,
+  METRIC_ROWS, WINDOWS, fmtDec, p90Series, planMetrics, slotIndexOf, solnaMetrics, trainsOnLine, verdict, windowRange,
   type MetricKey, type Scope, type WindowId,
 } from '../twin/metrics';
 import { fmtClock } from '../twin/selectors';
@@ -10,7 +10,7 @@ import { SLOTS } from '../../src/index';
 import { SERVICE_START_MIN, SLOT_MINUTES } from '../../src/data/time';
 
 const planName = planLabel;
-/** Karşılaştırmanın referansı her zaman mevcut tarife; mevcut seçiliyse önerilen planla karşılaştırılır */
+/** The comparison reference is always the current timetable; if Current is selected, compare with Recommended */
 const otherPlan = (id: string) => (id === 'current' ? 'optimized' : 'current');
 const comparedPlan = (id: string) => (id === 'current' ? 'optimized' : id);
 const LIMIT_LF = DATASET.constraints.maxLoadFactor.value;
@@ -18,12 +18,26 @@ const LIMIT_D = DATASET.constraints.platformDensityLimit.value;
 
 function Delta({ k, a, b, text }: { k: MetricKey; a: number; b: number; text: string }) {
   const v = verdict(k, a, b);
-  if (v === 'same') return <span className="delta same">aynı</span>;
+  if (v === 'same') return <span className="delta same">same</span>;
   return <span className={`delta ${v}`}>{text}</span>;
 }
 
-/** Üst şerit: seçili planın bu 15 dakikadaki ölçütleri, diğer plana göre farkıyla */
-export function KpiStrip() {
+const rowFor = (k: MetricKey) => METRIC_ROWS.find((r) => r.key === k)!;
+
+function Tile({ k, label, cur, base, sub, warn }: { k: MetricKey; label: string; cur: number; base: number; sub?: string; warn?: boolean }) {
+  return (
+    <div className="kpi">
+      <span className="kpi-label">{label}</span>
+      <span className="kpi-row">
+        <span className={`kpi-val num ${warn ? 'warn' : ''}`}>{rowFor(k).fmt(cur)}</span>
+        <Delta k={k} a={base} b={cur} text={rowFor(k).delta(cur - base)} />
+      </span>
+      {sub && <span className="kpi-sub">{sub}</span>}
+    </div>
+  );
+}
+
+function TcStrip() {
   const t = useTwin((s) => Math.floor(s.t));
   const planId = useTwin((s) => s.planId);
   const scenario = useTwin((s) => s.scenario);
@@ -35,39 +49,65 @@ export function KpiStrip() {
   const lnO = planMetrics(other, scenario, 'slot', 'line', t);
   const [a, b] = windowRange('slot', t);
   const onLine = trainsOnLine(result, t);
-  const rowFor = (k: MetricKey) => METRIC_ROWS.find((r) => r.key === k)!;
-  const tile = (k: MetricKey, label: string, cur: number, ref: number, sub?: string, warn?: boolean) => (
-    <div className="kpi" key={k + label}>
-      <span className="kpi-label">{label}</span>
-      <span className="kpi-row">
-        <span className={`kpi-val num ${warn ? 'warn' : ''}`}>{rowFor(k).fmt(cur)}</span>
-        <Delta k={k} a={ref} b={cur} text={rowFor(k).delta(cur - ref)} />
-      </span>
-      {sub && <span className="kpi-sub">{sub}</span>}
-    </div>
-  );
   return (
-    <section className="card kpis" aria-label="Ölçütler">
+    <section className="card kpis" aria-label="Metrics, T-Centralen">
       <p className="kpis-head">
         <span className="label">{fmtClock(a)}–{fmtClock(b)} · {planName(planId)} plan</span>
-        <span className="muted">fark: {planName(other)} plana göre</span>
+        <span className="muted">difference vs {planName(other)} plan</span>
       </p>
       <div className="kpi-grid">
-        {tile('dispersionP90Sec', 'Dağılma süresi · P90', st.dispersionP90Sec, stO.dispersionP90Sec, 'T-Centralen · dk:sn')}
-        {tile('avgWaitSec', 'Ortalama bekleme', st.avgWaitSec, stO.avgWaitSec, 'T-Centralen · dk:sn')}
-        {tile('maxPlatformDensity', 'Peron yoğunluğu', st.maxPlatformDensity, stO.maxPlatformDensity, `kişi/m² · sınır ${fmtDec(LIMIT_D)}`, st.maxPlatformDensity >= LIMIT_D)}
-        {tile('peakLoadFactor', 'Vagon doluluğu', ln.peakLoadFactor, lnO.peakLoadFactor, `tüm hat · sınır %${Math.round(LIMIT_LF * 100)}`, ln.peakLoadFactor > LIMIT_LF)}
+        <Tile k="dispersionP90Sec" label="Dispersion P90" cur={st.dispersionP90Sec} base={stO.dispersionP90Sec} sub="T-Centralen · min:s" />
+        <Tile k="avgWaitSec" label="Average wait" cur={st.avgWaitSec} base={stO.avgWaitSec} sub="T-Centralen · min:s" />
+        <Tile k="maxPlatformDensity" label="Platform density" cur={st.maxPlatformDensity} base={stO.maxPlatformDensity} sub={`people/m² · max ${fmtDec(LIMIT_D)}`} warn={st.maxPlatformDensity >= LIMIT_D} />
+        <Tile k="peakLoadFactor" label="Train load" cur={ln.peakLoadFactor} base={lnO.peakLoadFactor} sub={`whole line · max ${Math.round(LIMIT_LF * 100)}%`} warn={ln.peakLoadFactor > LIMIT_LF} />
         <div className="kpi">
-          <span className="kpi-label">Hattaki tren</span>
-          <span className="kpi-row"><span className="kpi-val num">{onLine.trains}</span><span className="kpi-sub inline">{onLine.units} ünite</span></span>
-          <span className="kpi-sub">filo {DATASET.fleet.unitsAvailable.value} ünite</span>
+          <span className="kpi-label">Trains on T14</span>
+          <span className="kpi-row"><span className="kpi-val num">{onLine.trains}</span><span className="kpi-sub inline">{onLine.units} units</span></span>
+          <span className="kpi-sub">fleet {DATASET.fleet.unitsAvailable.value} units</span>
         </div>
       </div>
     </section>
   );
 }
 
-/** Gün boyu her 15 dakikada dağılma süresi; iki plan, seçili pencere ve şu an işaretli */
+function SolnaStrip() {
+  const t = useTwin((s) => Math.floor(s.t));
+  const planId = useTwin((s) => s.planId);
+  const scenario = useTwin((s) => s.scenario);
+  const corridor = useTwin((s) => s.corridor);
+  const m = solnaMetrics(planId, scenario, t);
+  const ref = solnaMetrics('current', scenario, t);
+  const [a, b] = windowRange('slot', t);
+  const lim = corridor.corridor.ds.constraints;
+  const onLine = trainsOnLine(corridor.result, t);
+  return (
+    <section className="card kpis" aria-label="Metrics, Solna">
+      <p className="kpis-head">
+        <span className="label">{fmtClock(a)}–{fmtClock(b)} · Solna · commuter timetable</span>
+        <span className="muted">{planId === 'current' ? 'T14 plan: Current' : `difference vs Current T14 plan (transfers)`}</span>
+      </p>
+      <div className="kpi-grid">
+        <Tile k="dispersionP90Sec" label="Dispersion P90" cur={m.p90WaitSec} base={ref.p90WaitSec} sub="Solna · min:s" />
+        <Tile k="avgWaitSec" label="Average wait" cur={m.avgWaitSec} base={ref.avgWaitSec} sub="Solna · min:s" />
+        <Tile k="maxPlatformDensity" label="Platform density" cur={m.densityMax} base={ref.densityMax} sub={`people/m² · max ${fmtDec(lim.platformDensityLimit.value)}`} warn={m.densityMax >= lim.platformDensityLimit.value} />
+        <Tile k="peakLoadFactor" label="Train load" cur={m.maxDepartureLoad} base={ref.maxDepartureLoad} sub={`leaving Solna · max ${Math.round(lim.maxLoadFactor.value * 100)}%`} warn={m.maxDepartureLoad > lim.maxLoadFactor.value} />
+        <div className="kpi">
+          <span className="kpi-label">Commuter trains</span>
+          <span className="kpi-row"><span className="kpi-val num">{onLine.trains}</span><span className="kpi-sub inline">running</span></span>
+          <span className="kpi-sub">{m.trains} call at Solna in slot</span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Top strip: the focused station's metrics for this 15 minutes, with the difference to the reference plan */
+export function KpiStrip() {
+  const focus = useTwin((s) => s.focus);
+  return focus === 'tc' ? <TcStrip /> : <SolnaStrip />;
+}
+
+/** Dispersion time for every 15 minutes of the day; two plans, the selected window and now marked */
 function DayChart({ scope, win }: { scope: Scope; win: WindowId }) {
   const t = useTwin((s) => Math.floor(s.t));
   const scenario = useTwin((s) => s.scenario);
@@ -77,7 +117,7 @@ function DayChart({ scope, win }: { scope: Scope; win: WindowId }) {
   const W = 420, H = 132, L = 30, R = 6, top = 8, base = 104;
   const n = SLOTS.length;
   const maxV = Math.max(300, ...series.flat());
-  const yMax = Math.ceil(maxV / 300) * 300; // 5 dk adımlar
+  const yMax = Math.ceil(maxV / 300) * 300; // 5-minute steps
   const x = (i: number) => L + (i / (n - 1)) * (W - L - R);
   const xt = (sec: number) => L + ((sec - SERVICE_START_MIN * 60) / (SLOT_MINUTES * 60 * (n - 1))) * (W - L - R);
   const y = (v: number) => base - (v / yMax) * (base - top);
@@ -89,14 +129,14 @@ function DayChart({ scope, win }: { scope: Scope; win: WindowId }) {
   return (
     <figure className="chart">
       <figcaption className="chart-head">
-        <span className="label">Gün boyu dağılma süresi (P90)</span>
+        <span className="label">Dispersion time over the day (P90)</span>
         <span className="chart-legend">
           {ids.map((id) => (
             <span key={id}><span className="key-line" style={{ background: colors(id) }} />{planName(id)}</span>
           ))}
         </span>
       </figcaption>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="İki planın gün boyu dağılma süresi">
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Dispersion time of both plans over the day">
         <rect x={xt(wa)} y={top} width={Math.max(2, xt(wb) - xt(wa))} height={base - top} fill="var(--accent)" opacity="0.08" />
         {ticksY.map((v) => (
           <g key={v}>
@@ -107,7 +147,7 @@ function DayChart({ scope, win }: { scope: Scope; win: WindowId }) {
         {hours.map((h) => (
           <text key={h} x={xt(h * 3600)} y={base + 14} textAnchor="middle" className="axis">{String(h % 24).padStart(2, '0')}</text>
         ))}
-        <text x={L - 4} y={top - 1} textAnchor="end" className="axis">dk</text>
+        <text x={L - 4} y={top - 1} textAnchor="end" className="axis">min</text>
         {ids.map((id, k) => (
           <path key={id} d={path(series[k])} fill="none" stroke={colors(id)} strokeWidth={id === planId ? 2.2 : 1.4} strokeLinejoin="round" opacity={id === planId ? 1 : 0.85} />
         ))}
@@ -130,31 +170,31 @@ export function Compare() {
   const mB = planMetrics(alt, scenario, win, scope, t);
   const slot = slotIndexOf(t);
   const ps = [base, alt].map((id) => ({ id, s: resolvePlan(id, scenario).slots[slot] }));
-  const fmtHw = (m: number) => `${m.toLocaleString('tr-TR')} dk`;
+  const fmtHw = (m: number) => `every ${m.toLocaleString('en-US')} min`;
   return (
-    <section className="pane" aria-label="Plan karşılaştırması">
+    <section className="pane" aria-label="Plan comparison">
       <header className="compare-head">
-        <h2>Plan karşılaştırması</h2>
+        <h2>T14 plan comparison</h2>
         <span className="muted">{SCENARIOS[scenario].name}</span>
       </header>
       <div className="filters">
-        <label htmlFor="compare-window" className="sr-only">Zaman penceresi</label>
+        <label htmlFor="compare-window" className="sr-only">Time window</label>
         <select id="compare-window" value={win} onChange={(e) => setCompare({ window: e.target.value as WindowId })}>
           {WINDOWS.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}
         </select>
-        <div className="seg" role="group" aria-label="Kapsam">
+        <div className="seg" role="group" aria-label="Scope">
           <button type="button" id="scope-station" aria-pressed={scope === 'station'} onClick={() => setCompare({ scope: 'station' })}>T-Centralen</button>
-          <button type="button" id="scope-line" aria-pressed={scope === 'line'} onClick={() => setCompare({ scope: 'line' })}>Tüm hat</button>
+          <button type="button" id="scope-line" aria-pressed={scope === 'line'} onClick={() => setCompare({ scope: 'line' })}>Whole line</button>
         </div>
       </div>
       <div className="table-wrap">
         <table className="cmp">
           <thead>
             <tr>
-              <th scope="col">Ölçüt</th>
+              <th scope="col">Metric</th>
               <th scope="col" className={planId === base ? 'sel' : ''}>{planName(base)}</th>
               <th scope="col" className={planId === alt ? 'sel' : ''}>{planName(alt)}</th>
-              <th scope="col">Fark</th>
+              <th scope="col">Diff.</th>
             </tr>
           </thead>
           <tbody>
@@ -171,13 +211,12 @@ export function Compare() {
       </div>
       <DayChart scope={scope} win={win} />
       <p className="slot-plan">
-        <span className="label">Bu dilimde sefer</span>
+        <span className="label">Service in this slot</span>
         {ps.map((p) => (
-          <span key={p.id} className="num"><strong>{planName(p.id)}</strong> {fmtHw(p.s.headwayMin)} · {p.s.unitsPerTrain} ünite</span>
+          <span key={p.id} className="num"><strong>{planName(p.id)}</strong> {fmtHw(p.s.headwayMin)} · {p.s.unitsPerTrain} units</span>
         ))}
       </p>
-      <p className="note muted">Fark: {planName(alt)} − Mevcut. Yeşil daha iyi, turuncu daha kötü. Tüm ölçütlerde küçük değer daha iyidir.</p>
+      <p className="note muted">Difference: {planName(alt)} − Current. Green is better, orange is worse. Smaller is better for every metric.</p>
     </section>
   );
 }
-

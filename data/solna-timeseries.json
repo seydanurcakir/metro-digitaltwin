@@ -12,7 +12,7 @@
    "src": {
     "kind": "published",
     "ref": "sl-fakta-2022",
-    "note": "Pendeltåg, kış iş günü; otomatik sayım. (2019: 20 900, wiki-solna)"
+    "note": "Commuter rail, winter weekday; automatic counts. (2019: 20,900, wiki-solna)"
    }
   },
   "platform": {
@@ -21,7 +21,7 @@
     "src": {
      "kind": "assumption",
      "ref": "assumption",
-     "note": "Tek ada peron (wiki-solna); ~225 m × ~7 m kullanılabilir genişlik."
+     "note": "Single island platform (wiki-solna); ~225 m × ~7 m usable width."
     }
    },
    "areaShareByDirection": {
@@ -29,7 +29,7 @@
     "src": {
      "kind": "assumption",
      "ref": "assumption",
-     "note": "Ada peronda iki yön alanı eşit paylaşır."
+     "note": "On an island platform both directions share the area equally."
     }
    },
    "lengthM": {
@@ -37,7 +37,7 @@
     "src": {
      "kind": "assumption",
      "ref": "assumption",
-     "note": "İki üniteli X60 (214 m) alacak uzunluk."
+     "note": "Long enough for a two-unit X60 (214 m)."
     }
    }
   },
@@ -46,16 +46,16 @@
    "src": {
     "kind": "assumption",
     "ref": "assumption",
-    "note": "Standart pendeltåg kapı açık süresi."
+    "note": "Standard commuter rail dwell."
    }
   }
  },
- "generatedFrom": "npm run solna — T14 mevcut tarife + pendeltåg mevcut tarife, normal iş günü, sentetik gün içi talep",
+ "generatedFrom": "npm run solna — T14 current timetable + commuter rail current timetable, normal weekday, synthetic time-of-day demand",
  "units": {
-  "waitSec": "saniye",
-  "density": "kişi/m²",
-  "occupancy": "perondaki kişi / (alan × 2,0 kişi/m²)",
-  "load": "kalkışta yük / kapasite"
+  "waitSec": "seconds",
+  "density": "people/m²",
+  "occupancy": "people on platform / (area × 2.0 people/m²)",
+  "load": "load on departure / capacity"
  },
  "slots": [
   {

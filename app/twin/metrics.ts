@@ -1,18 +1,19 @@
-// Ölçüt katmanı: plan karşılaştırması, zaman penceresi ve kapsam filtreleri. Her sayı simülasyondan hesaplanır.
+// Metrics layer: plan comparison, time windows and scope filters. Every number is computed from the simulation.
 import { computeKpis, hhmmToSec, SLOTS, type Kpis, type SimResult } from '../../src/index';
 import { SERVICE_END_MIN, SERVICE_START_MIN, SLOT_MINUTES } from '../../src/data/time';
 import { DATASET, FOCUS_STATION_ID, getResult, type ScenarioId } from './model';
+import { getCorridor } from './network';
 
 export type WindowId = 'slot' | 'am' | 'mid' | 'pm' | 'eve' | 'day';
 export type Scope = 'station' | 'line';
 
 export const WINDOWS: { id: WindowId; label: string; range?: [string, string] }[] = [
-  { id: 'slot', label: 'Bu 15 dakika' },
-  { id: 'am', label: 'Sabah zirvesi 07:30–08:30', range: ['07:30', '08:30'] },
-  { id: 'mid', label: 'Öğle 10:00–14:00', range: ['10:00', '14:00'] },
-  { id: 'pm', label: 'Akşam zirvesi 16:30–17:30', range: ['16:30', '17:30'] },
-  { id: 'eve', label: 'Akşam 20:30–22:00', range: ['20:30', '22:00'] },
-  { id: 'day', label: 'Tüm gün', range: ['05:00', '01:00'] },
+  { id: 'slot', label: 'This 15 minutes' },
+  { id: 'am', label: 'Morning peak 07:30–08:30', range: ['07:30', '08:30'] },
+  { id: 'mid', label: 'Midday 10:00–14:00', range: ['10:00', '14:00'] },
+  { id: 'pm', label: 'Evening peak 16:30–17:30', range: ['16:30', '17:30'] },
+  { id: 'eve', label: 'Evening 20:30–22:00', range: ['20:30', '22:00'] },
+  { id: 'day', label: 'Whole day', range: ['05:00', '01:00'] },
 ];
 
 const SLOT_SEC = SLOT_MINUTES * 60;
@@ -33,7 +34,7 @@ export function windowRange(id: WindowId, t: number): [number, number] {
 }
 
 export interface PlanMetrics extends Kpis {
-  /** Penceredeki son duraklardan kalkan ünite-sefer (işletme maliyeti göstergesi) */
+  /** Unit-trips departing the terminals in the window (operating cost proxy) */
   unitTrips: number;
 }
 
@@ -57,12 +58,12 @@ export function planMetrics(planId: string, scenario: ScenarioId, win: WindowId,
 
 const seriesCache = new Map<string, number[]>();
 
-/** Gün boyu her 15 dakikalık dilim için dağılma P90 (sn) */
+/** Dispersion P90 (s) for every 15-minute slot of the day */
 export function p90Series(planId: string, scenario: ScenarioId, scope: Scope): number[] {
   const key = `${planId}|${scenario}|${scope}`;
   let s = seriesCache.get(key);
   if (!s) {
-    // Kayıtları bir kez dilimlere ayır, sonra her dilimde ağırlıklı yüzdelik al (computeKpis ile aynı tanım).
+    // Bucket the records once, then take the weighted percentile per slot (same definition as computeKpis).
     const w = getResult(planId, scenario).waits;
     const order = scope === 'station' ? DATASET.line.stations.find((x) => x.id === FOCUS_STATION_ID)!.order : -1;
     const buckets: number[][] = SLOTS.map(() => []);
@@ -87,15 +88,15 @@ export function p90Series(planId: string, scenario: ScenarioId, scope: Scope): n
 export type MetricKey = keyof PlanMetrics;
 
 export const METRIC_ROWS: { key: MetricKey; label: string; fmt: (v: number) => string; delta: (d: number) => string }[] = [
-  { key: 'dispersionP90Sec', label: 'Dağılma süresi (P90)', fmt: (v) => fmtMinSec(v), delta: (d) => `${d > 0 ? '+' : d < 0 ? '−' : ''}${fmtMinSec(Math.abs(d))}` },
-  { key: 'avgWaitSec', label: 'Ort. bekleme', fmt: (v) => fmtMinSec(v), delta: (d) => `${d > 0 ? '+' : d < 0 ? '−' : ''}${fmtMinSec(Math.abs(d))}` },
-  { key: 'peakLoadFactor', label: 'En yüksek doluluk', fmt: (v) => `%${Math.round(v * 100)}`, delta: (d) => `${d > 0 ? '+' : d < 0 ? '−' : ''}${Math.abs(Math.round(d * 100))} puan` },
-  { key: 'maxPlatformDensity', label: 'Peron yoğunluğu (kişi/m²)', fmt: (v) => fmtDec(v), delta: (d) => `${d > 0 ? '+' : d < 0 ? '−' : ''}${fmtDec(Math.abs(d))}` },
-  { key: 'leftBehind', label: 'Trene sığamayan (kişi)', fmt: (v) => fmtInt(v), delta: (d) => `${d > 0 ? '+' : d < 0 ? '−' : ''}${fmtInt(Math.abs(d))}` },
-  { key: 'unitTrips', label: 'İşletme (ünite-sefer)', fmt: (v) => fmtInt(v), delta: (d) => `${d > 0 ? '+' : d < 0 ? '−' : ''}${fmtInt(Math.abs(d))}` },
+  { key: 'dispersionP90Sec', label: 'Dispersion time (P90)', fmt: (v) => fmtMinSec(v), delta: (d) => `${d > 0 ? '+' : d < 0 ? '−' : ''}${fmtMinSec(Math.abs(d))}` },
+  { key: 'avgWaitSec', label: 'Avg. wait', fmt: (v) => fmtMinSec(v), delta: (d) => `${d > 0 ? '+' : d < 0 ? '−' : ''}${fmtMinSec(Math.abs(d))}` },
+  { key: 'peakLoadFactor', label: 'Peak load factor', fmt: (v) => `${Math.round(v * 100)}%`, delta: (d) => `${d > 0 ? '+' : d < 0 ? '−' : ''}${Math.abs(Math.round(d * 100))} pts` },
+  { key: 'maxPlatformDensity', label: 'Platform density (people/m²)', fmt: (v) => fmtDec(v), delta: (d) => `${d > 0 ? '+' : d < 0 ? '−' : ''}${fmtDec(Math.abs(d))}` },
+  { key: 'leftBehind', label: 'Left behind (people)', fmt: (v) => fmtInt(v), delta: (d) => `${d > 0 ? '+' : d < 0 ? '−' : ''}${fmtInt(Math.abs(d))}` },
+  { key: 'unitTrips', label: 'Operation (unit-trips)', fmt: (v) => fmtInt(v), delta: (d) => `${d > 0 ? '+' : d < 0 ? '−' : ''}${fmtInt(Math.abs(d))}` },
 ];
 
-/** Tüm ölçütlerde küçük olan daha iyi. Küçük farklar "değişmedi" sayılır. */
+/** For every metric, smaller is better. Tiny differences count as "unchanged". */
 export function verdict(key: MetricKey, a: number, b: number): 'better' | 'worse' | 'same' {
   const eps = key === 'peakLoadFactor' ? 0.005 : key === 'maxPlatformDensity' ? 0.005 : key === 'unitTrips' || key === 'leftBehind' ? 0.5 : 1;
   if (Math.abs(b - a) < eps) return 'same';
@@ -106,14 +107,29 @@ export function fmtMinSec(sec: number) {
   const s = Math.round(sec);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
-export const fmtInt = (n: number) => Math.round(n).toLocaleString('tr-TR');
-export const fmtDec = (n: number) => n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const fmtInt = (n: number) => Math.round(n).toLocaleString('en-US');
+export const fmtDec = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-/** t anında hatta (iki son durak arasında) olan tren ve ünite sayısı */
+/** Trains and units on the line (between the terminals) at t */
 export function trainsOnLine(r: SimResult, t: number) {
   let trains = 0, units = 0;
   for (const tr of r.trips) {
     if (t >= tr.stops[0].t && t <= tr.stops[tr.stops.length - 1].t) { trains++; units += tr.units; }
   }
   return { trains, units };
+}
+
+/** Solna station metrics for the 15-minute slot at t (from the corridor's station agent) */
+export interface SolnaMetrics {
+  p90WaitSec: number;
+  avgWaitSec: number;
+  densityMax: number;
+  maxDepartureLoad: number;
+  trains: number;
+  leftBehind: number;
+}
+
+export function solnaMetrics(planId: string, scenario: ScenarioId, t: number): SolnaMetrics {
+  const k = getCorridor(planId, scenario).series[slotIndexOf(t)];
+  return { p90WaitSec: k.p90WaitSec, avgWaitSec: k.avgWaitSec, densityMax: k.densityMax, maxDepartureLoad: k.maxDepartureLoad, trains: k.trains, leftBehind: k.leftBehind };
 }

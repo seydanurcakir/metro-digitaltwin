@@ -1,7 +1,7 @@
 [
  {
   "id": "optimized",
-  "name": "Önerilen plan",
+  "name": "Recommended plan",
   "kind": "candidate",
   "slots": [
    {
@@ -408,12 +408,12 @@
   "src": {
    "kind": "derived",
    "ref": "optimizer",
-   "note": "Optimizasyon: bütçe 1104 ünite-sefer, yolcu ağırlıklı dağılma süresi en aza indirildi, simülasyonla doğrulandı."
+   "note": "Optimisation: budget 1104 unit-trips, passenger-weighted dispersion time minimised, validated by simulation."
   }
  },
  {
   "id": "optimized-event",
-  "name": "Önerilen plan (etkinlik)",
+  "name": "Recommended plan (event)",
   "kind": "candidate",
   "slots": [
    {
@@ -820,7 +820,7 @@
   "src": {
    "kind": "derived",
    "ref": "optimizer",
-   "note": "Optimizasyon: bütçe 1104 ünite-sefer, yolcu ağırlıklı dağılma süresi en aza indirildi, simülasyonla doğrulandı."
+   "note": "Optimisation: budget 1104 unit-trips, passenger-weighted dispersion time minimised, validated by simulation."
   }
  }
 ]

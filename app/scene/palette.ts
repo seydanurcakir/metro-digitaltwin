@@ -1,4 +1,4 @@
-// Sahne malzeme renkleri (her iki temada da aynı; arka plan sayfa temasından gelir).
+// Scene material colours (same in both themes; map ground colours follow the page theme).
 export const C = {
   slab: '#C3C9CF',
   ballast: '#7B8187',
@@ -9,6 +9,7 @@ export const C = {
   wall: '#EEEDE8',
   wallDado: '#D7D4CA',
   redStripe: '#D2382F',
+  pinkStripe: '#C2477A',
   sign: '#1E5AA8',
   pillar: '#F4F3EF',
   beam: '#D8DCE0',
@@ -24,12 +25,15 @@ export const C = {
   tunnel: '#B4BAC0',
   tunnelTop: '#C9CED3',
   portal: '#1E2328',
-  carBody: '#E6E9EC',
+  canopy: '#E9ECEE',
+  canopyEdge: '#9AA3AC',
+  steel: '#6F7983',
+  fence: '#8D969F',
+  embankment: '#A39C90',
+  bridgeDeck: '#DDE1E5',
   carRoof: '#C7CDD3',
-  carStripe: '#2A5DB0',
   carWindow: '#2E3A46',
   carDoorOpen: '#151A1F',
-  cab: '#222B34',
   ad: ['#C8D4DF', '#E6D4B6', '#CFDDCB', '#DCCFE0'],
   clothes: ['#4A5A6B', '#7A5A44', '#2F5F8A', '#8E3F3F', '#4F6B4C', '#2E2F33', '#A07E3E', '#6B5B8A', '#9AA5B1', '#3D3A4F'],
   skin: ['#E9C9A6', '#C99A6E', '#8E5D3D', '#F1D6BC'],
@@ -38,3 +42,9 @@ export const C = {
 } as const;
 
 export const loadColor = (lf: number) => (lf >= 0.9 ? C.load.full : lf >= 0.75 ? C.load.busy : C.load.ok);
+
+/** Map ground and grid when no street basemap is available */
+export const MAP_GROUND = {
+  light: { ground: '#E7EBEE', grid: '#D3D9DE', casing: '#FFFFFF' },
+  dark: { ground: '#18202A', grid: '#24303B', casing: '#0E141A' },
+} as const;

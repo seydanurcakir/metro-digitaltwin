@@ -1,190 +1,188 @@
-# Metro İkizi
+# Stockholm Metro Twin
 
-**Canlı demo: [metro-digitaltwin.netlify.app](https://metro-digitaltwin.netlify.app)**
+**Live demo: [metro-digitaltwin.netlify.app](https://metro-digitaltwin.netlify.app)**
 
-Stockholm metrosu Kırmızı Hat T14 (Fruängen – Mörby centrum) için simülasyonla çalışan dijital ikiz. Ana ölçüt: **peron dağılma süresi**, yani perona gelenlerin %90'ının trene binip perondan ayrılma süresi.
+A simulation-driven digital twin of Stockholm's red metro line T14 (Fruängen – Mörby centrum) and the commuter rail corridor to Solna, shown on a geographic map. The primary KPI is **platform dispersion time**: the time within which 90% of passengers arriving on a platform have boarded a train and left.
 
 ```bash
 npm install
-npm test        # veri modeli + simülasyon + uygulama + optimizasyon + ağ testleri
-npm run dev     # 3B sahneyi tarayıcıda aç
-npm run build   # tek dosyalık sayfa: dist/
+npm test        # data model + simulation + app + optimiser + network + map tests
+npm run dev     # open the 3D map in the browser
+npm run build   # single-file page in dist/
 ```
 
-## Adım 7: Ağ katmanı ve Solna istasyonu (`src/network/`)
+## Step 8: Map, two station twins and live trains
 
-Solna station bir **pendeltåg** istasyonudur; T-Centralen’e metroyla bağlı değildir. Gerçek bağlantı: T-Centralen → (yürüme, ~5 dk) → Stockholm City → Stockholm Odenplan → Solna (7 dk, J40/J41/42X).
+The isolated 3D scene is now a navigable map of the network.
 
-| Dosya | İçerik |
+- **Geographic map.** Everything is placed in one metric frame centred on T-Centralen (Web Mercator scaled by cos 59.33°, so slippy-map tiles stay square and distances are true to ~0.1%). Pan, zoom from a single platform out to the whole network, rotate and tilt. A street basemap (© OpenStreetMap contributors, © CARTO) is loaded by the browser at run time; where external images are blocked the network is drawn on a plain 1 km grid and the page says so.
+- **Station coordinates** come from each station's Wikipedia article and carry provenance like every other value (`src/geo/geodata.ts`). Stockholm City has no published coordinates and is marked as an assumption.
+- **Two full 3D twins.** T-Centralen (underground: back wall, mezzanines, tunnels) and **Solna** (surface: island platform under a glass canopy, footbridges with gates, escalators, overhead line). Both have the same functions: live crowd and heat map, detailed trains with doors and roof load bars, clickable platform halves, escalators and station signs. The camera flies between them, and moving the map close to a twin makes it the focus of the dashboard.
+- **Live trains on the map.** Every simulated T14 and commuter train moves along its line in real time. A shared kinematics module (`src/geo/motion.ts`, trapezoidal speed profile between timetable stops) drives both the map trains and the trains inside the twins, so a train leaves a station model and continues on the map without a jump. Click any train to inspect it, or **follow** it with the camera.
+- **Network tab.** A live schematic of the T-Centralen ⇄ Solna corridor with every commuter train, the expected journey time right now (walk + wait + ride), and a list to track any train.
+- **English throughout**: UI, metrics, data notes and source titles, test output and this README.
+
+| File | Contents |
 |---|---|
-| `src/data/corridor-solna.ts` | Pendeltåg koridoru: City, Odenplan, **Solna**, Ulriksdal + iki sanal sınır düğümü; X60 filo; tarife; Citybanan kısıtları; aktarma parametreleri |
-| `src/network/network.ts` | Ağ grafiği: düğümler (istasyonlar), ray kenarları (süre, kapasite, sinyalizasyon), aktarma kenarı; en kısa güzergâh |
-| `src/network/integration.ts` | T14 ↔ koridor entegrasyonu: T-Centralen’de inenlerin bir kısmı yürüyerek Stockholm City peronuna gelir |
-| `src/network/station-agent.ts` | `StationAgent`: anlık durum (`stateAt`), dakikalık akış (`stream`), 15 dakikalık KPI zaman serisi (`timeSeries`) |
-| `scripts/solna.ts` | `npm run solna` → `data/solna-timeseries.json` ve `.csv` |
-| `scripts/test-network.ts` | Ağ, entegrasyon ve Solna testleri |
+| `src/geo/projection.ts` | Local metric projection, tile maths, bearings |
+| `src/geo/geodata.ts` | Station coordinates, platform axes of the twins, schematic shape points |
+| `src/geo/alignment.ts` | Line polylines with arc length; straight sections through the twins |
+| `src/geo/motion.ts` | Train position at any time t from the simulated timetable |
+| `app/twin/world.ts` | Lines, the two twins (layout, position, orientation), map stations, camera presets |
+| `app/scene/MapTiles.tsx` | Basemap tiles with level of detail and the fallback ground |
+| `app/scene/NetworkLines.tsx`, `NetworkTrains.tsx`, `StationLabels.tsx` | Lines, live trains and station labels on the map |
+| `scripts/test-geo.ts` | Projection vs. great-circle distances, tile numbers vs. the OSM formula, alignments, train kinematics |
 
-**T-Centralen ↔ Solna bağlantı parametreleri**
+URL options: `?tiles=off` hides the basemap; `?tiles=<url with {z}/{x}/{y}>` uses another tile server.
 
-| Kenar | Süre | Kapasite | Sinyalizasyon |
+## Step 7: Network layer and Solna station (`src/network/`)
+
+Solna station is a **commuter rail** (pendeltåg) station; it is not on the metro. The real connection is T-Centralen → (walk, ~5 min) → Stockholm City → Stockholm Odenplan → Solna (7 min, J40/J41/42X).
+
+| File | Contents |
+|---|---|
+| `src/data/corridor-solna.ts` | Commuter corridor: City, Odenplan, **Solna**, Ulriksdal + two virtual boundary nodes; X60 fleet; timetable; Citybanan constraints; transfer parameters |
+| `src/network/network.ts` | Network graph: nodes (stations), track edges (time, capacity, signalling), transfer edge; shortest route |
+| `src/network/integration.ts` | T14 ↔ corridor integration: some passengers alighting at T-Centralen walk to the Stockholm City platforms |
+| `src/network/station-agent.ts` | `StationAgent`: state at any time (`stateAt`), minute stream (`stream`), 15-minute KPI series (`timeSeries`) |
+| `scripts/solna.ts` | `npm run solna` → `data/solna-timeseries.json` and `.csv` |
+| `scripts/test-network.ts` | Network, integration and Solna tests |
+
+**T-Centralen ↔ Solna link parameters**
+
+| Edge | Time | Capacity | Signalling |
 |---|---|---|---|
-| T-Centralen → Stockholm City (aktarma) | 300 sn (varsayım) | 8 000 yolcu/saat (varsayım) | — |
-| Stockholm City → Odenplan (Citybanan) | 150 sn | 16 pendeltåg/saat/yön (yayın) | ATC-2, en kısa aralık 150 sn |
-| Odenplan → Solna | 225 sn | 20 tren/saat (türetilmiş) | ATC-2, 180 sn (varsayım) |
+| T-Centralen → Stockholm City (transfer) | 300 s (assumption) | 8,000 pax/h (assumption) | — |
+| Stockholm City → Odenplan (Citybanan) | 150 s | 16 commuter trains/h/direction (published) | ATC-2, min headway 150 s |
+| Odenplan → Solna | 225 s | 20 trains/h (derived) | ATC-2, 180 s (assumption) |
 
-City → Solna toplamı 7 dk (Solna stad).
+City → Solna takes 7 min in total (Solna stad).
 
-**Çift sayım yok:** Stockholm City’nin yayınlanmış binişi aktaranları zaten içerir. T14’ten gelen aktarma akışı kadar yolcu City’nin yürüyerek gelen talebinden düşülür; toplam korunur, aktarma dalgalarının zamanlaması T14 simülasyonundan gelir.
+**No double counting:** Stockholm City's published boardings already include transfers. The transfer flow from T14 is subtracted from City's walk-in demand, so the total is kept and only the timing of transfer waves comes from the T14 simulation.
 
-**Kapsam:** Yalnızca temel ulaşım operasyonu. Solna çevresindeki cazibe merkezleri (AVM, stadyum) ve etkinlik yığılmaları bu aşamada modellenmedi.
+**Scope:** core transport operations only. Attractions around Solna (mall, stadium) and event crowds are not modelled at this stage.
 
-Uygulamada sağ paneldeki **Ağ · Solna** sekmesi canlı durumu gösterir.
+## Deployment (Netlify, free)
 
-## Canlıya alma (Netlify, ücretsiz)
-
-Depodaki `netlify.toml` gerekli ayarları içerir: derleme komutu `npm run build`, yayın klasörü `dist`, Node 20.
+`netlify.toml` holds the settings: build command `npm run build`, publish folder `dist`, Node 20.
 
 1. [app.netlify.com](https://app.netlify.com) → **Add new project** → **Import an existing project** → **GitHub**
-2. `metro-digitaltwin` deposunu seçin; ayarlar dosyadan otomatik gelir → **Deploy**
-3. Site adını **Project configuration → Change project name** ile değiştirebilirsiniz (ör. `metro-ikizi.netlify.app`)
+2. Choose the `metro-digitaltwin` repository; the settings come from the file → **Deploy**
+3. Rename the site under **Project configuration → Change project name**
 
-Depoya her gönderimde site kendiliğinden yeniden derlenir.
+Every push to the repository rebuilds the site.
 
-## Adım 6: Optimizasyon (`src/opt/optimize.ts`)
+## Step 6: Optimisation (`src/opt/optimize.ts`)
 
-Her 15 dakikalık dilim için sefer aralığı (4 / 5 / 6 / 7,5 / 10 dk) ve tren uzunluğu (2 / 3 ünite) seçer.
+Chooses a headway (4 / 5 / 6 / 7.5 / 10 min) and train length (2 / 3 units) for every 15-minute slot.
 
-- **Amaç:** yolcu ağırlıklı dağılma süresini en aza indirmek.
-- **Bütçe:** toplam ünite-sefer ≤ mevcut tarife (ek işletme maliyeti yok).
-- **Kısıtlar:** ortak gövde (T13 + T14 ≤ 24 tren/saat), filo (54 ünite), en kısa ve en uzun sefer aralığı, vagon doluluğu ≤ %90, peron yoğunluğu ≤ 2,0 kişi/m².
-- **Yöntem:** çoklu seçimli sırt çantası problemi, dinamik programlamayla kesin çözüm. Ardından simülasyonla doğrulama: sınırı aşan dilimde ve kendinden önceki iki dilimde kapasite payı artırılıp yeniden çözülür. Trenler merkeze son duraktan ~20 dakikada vardığı için önlem önceden başlar.
+- **Objective:** minimise passenger-weighted dispersion time.
+- **Budget:** total unit-trips ≤ the current timetable (no extra operating cost).
+- **Constraints:** shared trunk (T13 + T14 ≤ 24 trains/h), fleet (54 units), min and max headway, train load ≤ 90%, platform density ≤ 2.0 people/m².
+- **Method:** multiple-choice knapsack solved exactly by dynamic programming, then validated by simulation: in a slot over a limit, and in the two slots before it, the capacity margin is raised and the problem solved again. Trains reach the centre ~20 minutes after leaving the terminal, so action starts early.
 
 ```bash
-npm run optimize   # src/data/optimized-plans.json dosyasını yeniden üretir
+npm run optimize   # regenerates src/data/optimized-plans.json
 ```
 
-| | Mevcut | Önerilen |
+| | Current | Recommended |
 |---|---|---|
-| Normal gün, akşam T-Centralen dağılma süresi | 9:00 | 3:30 |
-| Akşam kalabalığı (21:00, +3 000), T-Centralen | 29:45 | 4:45 |
-| Akşam kalabalığı, en yüksek peron yoğunluğu | 2,73 | 1,70 kişi/m² |
-| İşletme (ünite-sefer / gün) | 1 104 | 1 044 – 1 050 |
+| Normal day, evening dispersion time at T-Centralen | 9:00 | 3:30 |
+| Evening crowd (21:00, +3,000), T-Centralen | 29:45 | 4:45 |
+| Evening crowd, peak platform density | 2.73 | 1.70 people/m² |
+| Operation (unit-trips / day) | 1,104 | 1,044 – 1,050 |
 
-Sonuçlar sentetik talebe dayanır; gerçek turnike verisiyle optimizasyon yeniden çalıştırılmalıdır.
+Results rest on synthetic demand; rerun the optimisation with real gate data.
 
-## Adım 5: Ölçütler, karşılaştırma, inceleme
+## Step 5: Metrics, comparison, inspection
 
-- **Ölçüt şeridi (üstte):** seçili planın içinde bulunulan 15 dakikadaki dağılma süresi, ortalama bekleme, peron yoğunluğu, vagon doluluğu ve hattaki tren sayısı; her biri diğer plana göre farkıyla.
-- **Karşılaştırma sekmesi:** zaman penceresi (bu 15 dk, sabah zirvesi, öğle, akşam zirvesi, akşam, tüm gün) ve kapsam (T-Centralen / tüm hat) filtreleri; 6 ölçütün tablosu; gün boyu dağılma süresi grafiği; içinde bulunulan dilimin sefer planı.
-- Tüm sayılar `app/twin/metrics.ts` üzerinden simülasyondan hesaplanır; elle yazılmış sayı yoktur.
-- Diğer plan ve senaryoların simülasyonu sayfa açıldıktan sonra boşta kalan zamanda önceden hesaplanır.
-- `scripts/test-app.ts`: sahnenin ve panellerin okuduğu fonksiyonların simülasyonla tutarlılığı, kare başına hesap maliyeti (60 FPS bütçesi).
+- **KPI strip (top):** for the focused station, the current 15 minutes' dispersion time, average wait, platform density, train load and trains running; each with its difference to the reference plan.
+- **Compare plans tab:** time window (this 15 min, morning peak, midday, evening peak, evening, whole day) and scope (T-Centralen / whole line) filters; a table of 6 metrics; dispersion time over the day; the service in the current slot.
+- Every number is computed from the simulation via `app/twin/metrics.ts`; no number is typed by hand.
+- Other plans and scenarios are pre-computed in idle time after the page opens.
+- `scripts/test-app.ts`: consistency of what the scene and panels read with the simulation, and per-frame cost (60 FPS budget).
 
----
+## Step 4: Click to inspect
 
-
-## Adım 4: Tıkla ve incele
-
-| Tıklanan | Panel |
+| Clicked | Panel |
 |---|---|
-| Tren | Sefer kodu, yön, uzunluk/kapasite, T-Centralen'de inen/binen, kalkış doluluğu, hat boyunca doluluk grafiği, trenin şu anki yeri |
-| Peronun bir yarısı | Bekleyen kişi, yoğunluk ve sınır, son 30 dakikanın grafiği, gelecek 3 tren ve doluluğu, trene sığmayacak yolcu |
-| Yürüyen merdiven | Perona inen ve perondan çıkan akış (kişi/dk) |
-| İstasyon tabelası | İstasyon verileri ve her değerin kaynağı (yayın / hesaplanmış / varsayım / sentetik) |
+| Train (in a twin or on the map) | Train code, direction, length/capacity, where it is now, next stop, load, load along the line, stops; follow on map |
+| Half of a platform | People waiting, density vs. limit, last 30 minutes, next 3 trains and their load, passengers who will not fit |
+| Escalator | Flow down to and up from the platform (people/min) |
+| Station sign or map station | Live platform state, next trains, station data with the source of every value |
 
-Seçim Zustand'da (`selection`), hesaplar `app/twin/inspect.ts` içinde saf fonksiyonlar. Sürükleme tıklama sayılmaz; boşluğa tıklamak seçimi kaldırır.
+The selection lives in Zustand (`selection`); calculations are pure functions in `app/twin/inspect.ts`. A drag is not a click; clicking empty map clears the selection.
 
-## Adım 3: 3B sahne (`app/`)
+## Step 3: 3D scene (`app/`)
 
-React + React Three Fiber + Zustand. Unity ya da oyun motoru yok; tarayıcıda çalışır.
+React + React Three Fiber + Zustand. No game engine; it runs in the browser.
 
-```bash
-npm run dev     # geliştirme sunucusu
-npm run build   # tek dosya: dist/index.html ve dist/t-centralen-ikizi.html
-```
-
-| Klasör | Görevi |
+| Folder | Role |
 |---|---|
-| `app/twin/model.ts` | Veri setini kurar, simülasyonu plan × senaryo için bir kez çalıştırıp saklar |
-| `app/twin/layout.ts` | İstasyon ölçüleri veriden: peron uzunluğu/alanı, ray eksenleri, merdivenler |
-| `app/twin/selectors.ts` | Saf fonksiyonlar: t anında perondaki kişi, trenlerin konumu, sonraki tren |
-| `app/twin/store.ts` | Zaman, oynatma, hız, plan, senaryo (Zustand) |
-| `app/scene/` | Yalnızca çizim: istasyon, trenler, kalabalık + ısı haritası. İş mantığı yok |
-| `app/hud/` | Saat, kontroller, canlı okuma, lejant |
+| `app/twin/model.ts` | Builds the dataset, runs the simulation once per plan × scenario and caches it |
+| `app/twin/layout.ts` | Station dimensions from the data: platform length/area, track axes, escalators |
+| `app/twin/selectors.ts` | Pure functions: people on the platform at t, trains inside a twin, next train |
+| `app/twin/store.ts` | Time, playback, speed, plan, scenario, focus, selection, camera commands (Zustand) |
+| `app/scene/` | Drawing only: map, lines, trains, stations, crowd + heat map. No business logic |
+| `app/hud/` | Clock, controls, live readouts, legend, panels |
 
-Kural: sahne bileşenleri sayı hesaplamaz, `selectors.ts`'den okur. Veri modeli dosyalarına (`src/data`) dokunulmadı; motora yalnızca yön bazında kuyruk alanı (`queueAfter`) eklendi.
+Rule: scene components never compute numbers; they read from `selectors.ts`.
 
-Stockholm metrosu Kırmızı Hat T14 (Fruängen – Mörby centrum) için dijital ikizin veri katmanı. Arayüz yok; 3D sahne ve simülasyon yalnızca `buildDataset()` çıktısını okuyacak.
+## Step 2: Simulation engine (`src/sim/`)
 
-## Çalıştırma
+An event-based, mesoscopic model. A whole day simulates in about 0.1 s.
 
-```bash
-npm install
-npm run typecheck   # TypeScript tip kontrolü
-npm run validate    # veri modeli testleri + özet rapor
-npm run sim         # simülasyon testleri + plan karşılaştırma raporu
-```
+1. **Timetable:** departures from both terminals are generated from the service plan. Trains advance with running and dwell times. The first trips start early so trains are already spread along the line at 05:00.
+2. **Platform:** passengers arrive in 30-second groups and queue by direction (FIFO).
+3. **When a train arrives:** passengers for this station get off, then the queue boards until the train is full. Each boarding passenger's destination follows the demand model.
+4. **Records:** waiting time for every boarding, platform occupancy and train load at every stop.
 
-## Adım 2: Simülasyon motoru (`src/sim/`)
+`simulate(dataset, plan, { demandMultiplier, surges, boardingLimitFactor })`: `surges` add a sudden crowd at a station and time (e.g. after a match).
 
-Olay tabanlı, mezoskopik bir model. Bir günün tamamı yaklaşık 0,1 saniyede simüle ediliyor.
+### Metrics (`computeKpis`)
 
-1. **Tarife:** Sefer planından iki son duraktan kalkışlar üretilir. Trenler istasyonlar arası süre ve kapı açık süresiyle ilerler. 05:00'te trenler hat boyunca dağılmış olsun diye ilk seferler önceden başlar.
-2. **Peron:** Yolcular 30 saniyelik gruplar halinde perona gelir ve yönlerine göre sıraya girer (FIFO).
-3. **Tren gelince:** Önce o istasyonda inecekler iner, sonra sıradakiler kapasite dolana kadar biner. Binen yolcunun varış istasyonu talep modelindeki dağılıma göre belirlenir.
-4. **Kayıt:** Her binişte bekleme süresi, her durakta peron doluluğu ve tren yükü kaydedilir.
-
-`simulate(dataset, plan, { demandMultiplier, surges, boardingLimitFactor })`: `surges` belirli bir istasyon ve zamana ani kalabalık ekler (maç çıkışı gibi).
-
-### Ölçütler (`computeKpis`)
-
-| Ölçüt | Tanım |
+| Metric | Definition |
 |---|---|
-| Dağılma süresi P90 (ana ölçüt) | Perona gelenlerin %90'ının trene binip perondan ayrılma süresi |
-| Ortalama bekleme | Yolcu başına peronda geçen ortalama süre |
-| En yüksek doluluk | Kalkışta tren yükü / kapasite (sınır %90) |
-| Peron yoğunluğu | Tren gelmeden hemen önce kişi/m² (sınır 2,0) |
-| Geride kalan | Trene sığamayıp bir sonrakini bekleyen yolcu (kişi-kez) |
+| Dispersion time P90 (primary KPI) | Time within which 90% of arriving passengers have boarded and left the platform |
+| Average wait | Average time per passenger on the platform |
+| Peak load factor | Train load on departure / capacity (limit 90%) |
+| Platform density | People/m² just before a train arrives (limit 2.0) |
+| Left behind | Passengers who could not board and wait for the next train (person-times) |
 
-Ölçütler zaman penceresi ve istasyon bazında alınabilir. `slotSeries` 15 dakikalık seriler, `platformTrace` bir istasyonun peron doluluk izini verir; ikisi de grafikler için.
+Metrics can be taken per time window and per station. `slotSeries` gives 15-minute series and `platformTrace` a station's platform occupancy trace, both for charts.
 
-### Testler
+## Data files
 
-Korunum (gelen = binen + bekleyen, binen = inen), kapasite aşılmaması, sınırsız kapasitede beklemenin sefer aralığını aşmaması, determinizm, sık seferin beklemeyi artırmaması, talep ×3 stres testi, ani kalabalık testleri.
-
-## Dosyalar
-
-| Dosya | İçerik |
+| File | Contents |
 |---|---|
-| `src/types.ts` | Tüm tipler: hat, istasyon, peron, tren, talep, sefer planı, kısıtlar, ölçütler |
-| `src/data/sources.ts` | Kaynak listesi |
-| `src/data/line-t14.ts` | 19 istasyon, 18 bölüm, günlük binişler, peronlar, ortak gövde |
-| `src/data/fleet.ts` | C20 ünitesi (414 kişi), kısa/uzun tren, filo |
-| `src/data/time.ts` | 05:00–01:00 arası 80 adet 15 dakikalık dilim, gün içi talep eğrisi |
-| `src/data/demand.ts` | Dilim × istasyon × yön talebi ve varış istasyonu dağılımı |
-| `src/data/plans.ts` | Mevcut tarife, deneme planı, T13 trafiği, kısıtlar |
-| `scripts/validate.ts` | Testler |
+| `src/types.ts` | All types: line, station, platform, train, demand, service plan, constraints, metrics |
+| `src/data/sources.ts` | Source list |
+| `src/data/line-t14.ts` | 19 stations, 18 sections, daily boardings, platforms, shared trunk |
+| `src/data/fleet.ts` | C20 unit (414 passengers), short/long trains, fleet |
+| `src/data/time.ts` | 80 slots of 15 minutes from 05:00 to 01:00, time-of-day demand profile |
+| `src/data/demand.ts` | Demand per slot × station × direction and destination distribution |
+| `src/data/plans.ts` | Current timetable, trial plan, T13 traffic, constraints |
 
-## Her sayının bir kaynağı var
+## Every number has a source
 
-Her değer `{ value, src }` olarak tutulur. `src.kind` dört türden biridir:
+Every value is stored as `{ value, src }`. `src.kind` is one of:
 
-- `published`: resmi yayından (SL yıllık raporu, Wikipedia)
-- `derived`: yayınlanmış değerlerden hesaplanmış
-- `assumption`: varsayım, gerçek veriyle değiştirilmeli
-- `synthetic`: model tarafından üretilmiş
+- `published`: from an official publication (SL annual report, Wikipedia)
+- `derived`: computed from published values
+- `assumption`: an assumption, to be replaced with real data
+- `synthetic`: generated by the model
 
-## Talep nasıl üretiliyor?
+## How demand is generated
 
-1. **Günlük biniş (yayın):** SL 2022 raporu. Aktarma istasyonlarında 2019 Kırmızı Hat değeri × 0,72 (2022/2019 metro toplam oranı).
-2. **T14 payı:** Ortak gövdede (Liljeholmen–Östermalmstorg) T13 ile eşit paylaşım, %50.
-3. **Gün içi dağılım (sentetik):** 08:00 ve 16:45 zirveli eğri.
-4. **Yön ve varış (çekim modeli):** Yolcu, her istasyona o istasyonun biniş sayısıyla orantılı olasılıkla gider.
+1. **Daily boardings (published):** SL 2022 report. At interchange stations, the 2019 red line value × 0.72 (2022/2019 metro total ratio).
+2. **T14 share:** equal split with T13 on the shared trunk (Liljeholmen–Östermalmstorg), 50%.
+3. **Time of day (synthetic):** a curve peaking at 08:00 and 16:45.
+4. **Direction and destination (gravity model):** a passenger travels to each station with probability proportional to its boardings, with a morning/evening directional bias.
 
-## Değiştirilmesi gereken başlıca varsayımlar
+## Main assumptions to replace
 
-- İstasyonlar arası süreler → Trafiklab GTFS tarifesi
-- Peron alanları → istasyon planları
-- Gün içi talep eğrisi → turnike verisi
-- Sabah/akşam yön dengesizliği → şu an yok, zirve yükü olduğundan düşük görünüyor
-- T14'e ayrılan filo, ünite sayıları
+- Running times between stations → Trafiklab GTFS timetable
+- Track geometry between stations → GTFS shapes or OpenStreetMap (now straight lines plus a few schematic points)
+- Platform areas and the platform axes of the twins → station drawings
+- Time-of-day demand → gate data
+- Fleet allocated to T14, unit counts

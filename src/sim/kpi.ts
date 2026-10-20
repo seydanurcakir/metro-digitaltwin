@@ -1,16 +1,16 @@
-// Simülasyon sonuçlarından ölçütler. Her sayı simülasyon kayıtlarından hesaplanır.
+// Metrics from simulation results. Every number is computed from the simulation records.
 import type { Kpis, TwinDataset } from '../types';
 import type { SimResult } from './engine';
 import { SERVICE_START_MIN, SLOTS, SLOT_MINUTES } from '../data/time';
 
 export interface KpiFilter {
-  /** Yolcunun perona geliş zamanı penceresi (sn, gün başından) */
+  /** Window of passenger arrival times on the platform (s since start of day) */
   fromSec?: number;
   toSec?: number;
   stationId?: string;
 }
 
-/** Ağırlıklı yüzdelik */
+/** Weighted percentile */
 export function weightedPercentile(values: ArrayLike<number>, weights: ArrayLike<number>, p: number, mask?: (i: number) => boolean): number {
   const idx: number[] = [];
   let total = 0;
@@ -49,7 +49,7 @@ export function computeKpis(ds: TwinDataset, r: SimResult, f: KpiFilter = {}): K
   };
 }
 
-/** 15 dakikalık dilim bazında ölçüt serisi (grafikler için) */
+/** Metric series per 15-minute slot (for charts) */
 export function slotSeries(ds: TwinDataset, r: SimResult, stationId?: string) {
   return SLOTS.map((s) => {
     const fromSec = s.startMin * 60;
@@ -58,7 +58,7 @@ export function slotSeries(ds: TwinDataset, r: SimResult, stationId?: string) {
   });
 }
 
-/** Bir istasyonda peron doluluğunun zaman izi (tren öncesi / sonrası) */
+/** Time trace of platform occupancy at a station (before / after each train) */
 export function platformTrace(r: SimResult, stationId: string) {
   return r.events
     .filter((e) => e.stationId === stationId)

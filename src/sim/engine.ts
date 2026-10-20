@@ -1,18 +1,18 @@
-// Metro İkizi — simülasyon motoru (Adım 2).
-// Mezoskopik, olay tabanlı: trenler tarife ile hareket eder, yolcular peronda FIFO kuyrukta bekler.
-// Arayüz kodu yok; sonuçlar saf veri olarak döner.
+// Metro Twin — simulation engine.
+// Mesoscopic and event-based: trains follow the timetable, passengers wait on the platform in a FIFO queue.
+// No UI code; results are returned as plain data.
 
 import type { Direction, OdPeriod, ServicePlan, TwinDataset } from '../types';
 import { SERVICE_END_MIN, SERVICE_START_MIN, SLOT_MINUTES } from '../data/time';
 
 export interface SimOptions {
-  /** Peronda yolcu gelişleri bu aralıklarla gruplanır (sn) */
+  /** Platform arrivals are grouped into bins of this length (s) */
   binSec?: number;
-  /** Talep çarpanı (stres testi / senaryo) */
+  /** Demand multiplier (stress test / scenario) */
   demandMultiplier?: number;
-  /** Trene binişin durduğu doluluk oranı (1 = fiziksel kapasite) */
+  /** Load factor at which boarding stops (1 = physical capacity) */
   boardingLimitFactor?: number;
-  /** Ek talep: belirli istasyon/yön/zaman aralığına ekstra yolcu (ör. maç çıkışı) */
+  /** Extra demand: additional passengers at a station/direction/time window (e.g. after a match) */
   surges?: Surge[];
 }
 
@@ -24,26 +24,26 @@ export interface Surge {
   passengers: number;
 }
 
-/** Bir trenin bir istasyondaki durağı */
+/** One train's call at one station */
 export interface StopEvent {
   t: number;
   tripId: number;
   stationId: string;
   stationOrder: number;
   direction: Direction;
-  /** Tren gelmeden önce perondaki kişi (iki yön toplamı) */
+  /** People on the platform before the train arrives (both directions) */
   platformBefore: number;
-  /** Tren kalktıktan sonra perondaki kişi (iki yön toplamı) */
+  /** People on the platform after the train leaves (both directions) */
   platformAfter: number;
-  /** Tren kalktıktan sonra yön bazında kuyruk [kuzey, güney] */
+  /** Queue per direction after the train leaves [north, south] */
   queueAfter: [number, number];
-  /** Peron yoğunluğu, trenden hemen önce (kişi/m²) */
+  /** Platform density just before the train (people/m²) */
   densityBefore: number;
   alighted: number;
   boarded: number;
-  /** Trene sığamayıp peronda kalan (bu yön) */
+  /** Passengers left behind because the train was full (this direction) */
   leftBehind: number;
-  /** Kalkıştaki yolcu yükü */
+  /** Passenger load on departure */
   loadAfter: number;
   capacity: number;
 }
@@ -51,18 +51,18 @@ export interface StopEvent {
 export interface Trip {
   id: number;
   direction: Direction;
-  /** İlk duraktan kalkış (sn, gün başından) */
+  /** Departure from the first stop (s since start of day) */
   departSec: number;
   units: number;
   capacity: number;
-  /** Durak sırasıyla varış zamanları */
+  /** Arrival times in stop order */
   stops: { stationOrder: number; t: number }[];
 }
 
-/** Trene binen yolcu grupları (bekleme süresi dağılımı için) */
+/** Groups of boarding passengers (for the waiting-time distribution) */
 export interface WaitRecords {
   stationOrder: Int16Array;
-  direction: Uint8Array; // 0 kuzey, 1 güney
+  direction: Uint8Array; // 0 north, 1 south
   arrivalSec: Float64Array;
   waitSec: Float64Array;
   passengers: Float64Array;
@@ -95,12 +95,12 @@ export function simulate(ds: TwinDataset, plan: ServicePlan, opts: SimOptions = 
   const slotAt = (t: number) => Math.min(plan.slots.length - 1, Math.max(0, Math.floor((t - startSec) / slotSec)));
   const idx = new Map(st.map((s) => [s.id, s.order]));
 
-  // Geliş hızı: rate[slot][station][dir] (kişi/sn)
+  // Arrival rate: rate[slot][station][dir] (passengers/s)
   const nSlots = demand.profile.slots.length;
   const rate = new Float64Array(nSlots * n * 2);
   for (const c of demand.cells) rate[(c.slotIndex * n + idx.get(c.stationId)!) * 2 + DIR_IDX[c.direction]] = (c.arrivals * mult) / slotSec;
 
-  // Varış payları: od[period][origin][dir] -> Float64Array(n)
+  // Destination shares: od[period][origin][dir] -> Float64Array(n)
   const od = new Map<string, Float64Array>();
   for (const r of demand.od) {
     const v = new Float64Array(n);
@@ -109,12 +109,12 @@ export function simulate(ds: TwinDataset, plan: ServicePlan, opts: SimOptions = 
   }
   const periods: OdPeriod[] = demand.periodBySlot;
 
-  // Tarife: her iki son duraktan kalkışlar
+  // Timetable: departures from both terminals
   const runAfter = line.segments.map((g) => g.runTimeSec.value); // order k -> k+1
   const dwell = st.map((s) => (s.isTerminal ? 0 : s.dwellSec.value));
   const trips: Trip[] = [];
   let tripId = 0;
-  // Isınma: 05:00'te trenler zaten hat boyunca dağılmış olsun diye ilk seferler bir yön süresi kadar önce kalkar.
+  // Warm-up: the first trips start one one-way trip time early, so trains are already spread along the line at 05:00.
   const oneWaySec = runAfter.reduce((a, b) => a + b, 0) + dwell.reduce((a, b) => a + b, 0);
   for (const dir of ['north', 'south'] as Direction[]) {
     const route = dir === 'north' ? st.map((s) => s.order) : st.map((s) => s.order).reverse();
@@ -136,13 +136,13 @@ export function simulate(ds: TwinDataset, plan: ServicePlan, opts: SimOptions = 
     }
   }
 
-  // Peron kuyrukları
+  // Platform queues
   const queues: Cohort[][] = Array.from({ length: n * 2 }, () => []);
   const filled = new Float64Array(n * 2).fill(startSec);
   let arrived = 0;
   const surges = (opts.surges ?? []).map((s) => ({ ...s, q: idx.get(s.stationId)! * 2 + DIR_IDX[s.direction] }));
   const fill = (q: number, Tin: number) => {
-    const T = Math.min(Tin, endSec); // servis kapandıktan sonra yolcu gelmez
+    const T = Math.min(Tin, endSec); // no arrivals after service closes
     let a = filled[q];
     while (a < T - 1e-9) {
       const b = Math.min(T, (Math.floor(a / binSec) + 1) * binSec);
@@ -162,7 +162,7 @@ export function simulate(ds: TwinDataset, plan: ServicePlan, opts: SimOptions = 
   };
   const qSize = (q: number) => queues[q].reduce((x, c) => x + c.n, 0);
 
-  // Olayları zaman sırasına diz
+  // Sort events by time
   type Ev = { t: number; trip: Trip; i: number };
   const evs: Ev[] = [];
   for (const tr of trips) tr.stops.forEach((s, i) => evs.push({ t: s.t, trip: tr, i }));

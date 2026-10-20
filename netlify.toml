@@ -1,4 +1,4 @@
-# Netlify ayarları: depoyu Netlify'a bağlayınca bu değerler kendiliğinden kullanılır.
+# Netlify settings: used automatically once the repository is linked to Netlify.
 [build]
   command = "npm run build"
   publish = "dist"
@@ -6,7 +6,7 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# Önbellek: HTML her açılışta yenilensin
+# Caching: always revalidate HTML so a new deploy shows up immediately
 [[headers]]
   for = "/*.html"
   [headers.values]

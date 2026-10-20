@@ -1,5 +1,5 @@
-// Uygulamanın veri katmanı: veri setini kurar, simülasyonları bir kez çalıştırıp saklar.
-// Sahne bileşenleri yalnızca buradaki ve selectors.ts'deki saf fonksiyonları kullanır.
+// App data layer: builds the dataset and runs each simulation once, then caches it.
+// Scene components only use the pure functions here and in selectors.ts.
 import { buildDataset, simulate, hhmmToSec, type SimOptions, type SimResult, type TwinDataset } from '../../src/index';
 
 export const DATASET: TwinDataset = buildDataset();
@@ -16,10 +16,10 @@ export interface Scenario {
 const SURGE_START = hhmmToSec('21:00');
 
 export const SCENARIOS: Record<ScenarioId, Scenario> = {
-  normal: { id: 'normal', name: 'Normal iş günü', options: {} },
+  normal: { id: 'normal', name: 'Normal weekday', options: {} },
   surge: {
     id: 'surge',
-    name: 'Akşam kalabalığı',
+    name: 'Evening crowd',
     options: {
       surges: [{ stationId: FOCUS_STATION_ID, direction: 'south', startSec: SURGE_START, endSec: SURGE_START + 600, passengers: 3000 }],
     },
@@ -28,11 +28,11 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
 
 const cache = new Map<string, SimResult>();
 
-/** Arayüzde seçilebilen planlar. "Önerilen" senaryoya göre doğru optimize planı seçer. */
+/** Plans selectable in the UI. "Recommended" picks the right optimised plan for the scenario. */
 export const UI_PLANS = [
-  { id: 'current', label: 'Mevcut' },
-  { id: 'sample-candidate', label: 'Deneme' },
-  { id: 'optimized', label: 'Önerilen' },
+  { id: 'current', label: 'Current' },
+  { id: 'sample-candidate', label: 'Trial' },
+  { id: 'optimized', label: 'Recommended' },
 ] as const;
 export const planLabel = (id: string) => UI_PLANS.find((p) => p.id === id)?.label ?? id;
 

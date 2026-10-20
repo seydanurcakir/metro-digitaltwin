@@ -3,74 +3,86 @@ import type { SourceRef } from '../types';
 export const SOURCES: SourceRef[] = [
   {
     id: 'sl-fakta-2022',
-    title: 'Region Stockholm – Fakta om SL och länet 2022 (Påstigande per station – Tunnelbana)',
+    title: 'Region Stockholm – Fakta om SL och länet 2022 (boardings per station)',
     url: 'https://regionstockholm.se/4a2748/contentassets/d6c4da12e11843c0ab8249c297dfd8fe/fakta-om-sl-och-lanet-2022.pdf',
-    note: 'Kış iş günü ortalama günlük biniş. Metroda sayım elle yapılır. 2022 metro toplamı 912 000.',
+    note: 'Average winter weekday boardings. Metro counts are manual. 2022 metro total: 912,000.',
   },
   {
     id: 'wiki-red-line',
     title: 'Wikipedia – Red line (Stockholm Metro)',
     url: 'https://en.wikipedia.org/wiki/Red_line_(Stockholm_Metro)',
-    note: 'Hatlar, sefer aralıkları (T14 zirvede 5 dk), ortak gövdede saatte 24 tren, 2019 Kırmızı Hat istasyon binişleri.',
+    note: 'Lines, headways (T14 every 5 min in the peak), 24 trains/h on the shared trunk, 2019 red line station boardings.',
   },
   {
     id: 'sl-fakta-2019',
     title: 'SL och regionen 2019',
     url: 'https://miljobarometern.stockholm.se/content/Trafikrelaterat/sl_och_regionen_2019.pdf',
-    note: '2019 metro toplamı 1 266 000 biniş. 2019 değerlerini 2022 düzeyine ölçeklemek için kullanılır.',
+    note: '2019 metro total: 1,266,000 boardings. Used to scale 2019 values to the 2022 level.',
   },
   {
     id: 'wiki-c20',
     title: 'Wikipedia – SL C20',
     url: 'https://en.wikipedia.org/wiki/SL_C20',
-    note: '3 vagonlu ünite, 46,5 m, 126 oturma + 288 ayakta = 414 kişi. Trenler 2 veya 3 üniteden oluşur.',
+    note: '3-car unit, 46.5 m, 126 seated + 288 standing = 414 passengers. Trains run as 2 or 3 units.',
   },
   {
     id: 'wiki-solna',
     title: 'Wikipedia – Solna station',
     url: 'https://en.wikipedia.org/wiki/Solna_station',
-    note: 'Pendeltåg J40, J41, 42X; ada peron; Tvärbanan L30 bağlantısı; 2019’da iş günü 20 900 biniş.',
+    note: 'Commuter lines J40, J41, 42X; island platform; Tvärbanan L30 connection; 20,900 weekday boardings in 2019.',
   },
   {
     id: 'wiki-citybanan',
     title: 'Wikipedia – Stockholm City Line (Citybanan)',
     url: 'https://en.wikipedia.org/wiki/Stockholm_City_Line',
-    note: '7,4 km; yön başına saatte 24 tren, bunun 16’sı pendeltåg; ATC-2; Stockholm City istasyonu T-Centralen’in altında.',
+    note: '7.4 km; 24 trains/h per direction, 16 of them commuter trains; ATC-2; Stockholm City station lies below T-Centralen.',
   },
   {
     id: 'wiki-pendeltag',
     title: 'Wikipedia – Stockholm commuter rail',
     url: 'https://en.wikipedia.org/wiki/Stockholm_commuter_rail',
-    note: 'Hat 41 gündüz 15 dk, hat 40 genelde 30 dk; zirvede ek seferlerle ortalama 7,5 dk; merkez bölümde 3–4 dk; yalnızca X60 kullanılır.',
+    note: 'Line 41 every 15 min daytime, line 40 mostly every 30 min; about every 7.5 min in the peak with extra trains; 3–4 min in the core; X60 stock only.',
   },
   {
     id: 'wiki-x60',
     title: 'Wikipedia – SL X60',
     url: 'https://en.wikipedia.org/wiki/SL_X60',
-    note: '6 vagonlu ünite 107,1 m; 374 oturma, 530 ayakta (sayfa bu değerlerin ünite mi vagon mu başına olduğunu çelişkili veriyor; ünite başı kabul edildi); iki ünite 214 m.',
+    note: '6-car unit, 107.1 m; 374 seated, 530 standing (the page is ambiguous whether per unit or per car; taken per unit); two units = 214 m.',
   },
   {
     id: 'solna-stad',
     title: 'Solna stad – How to get to Solna via public transport',
     url: 'https://www.solna.se/om-solna-stad/kontakt-och-kommunikation/sa-tar-du-dig-till-solna/how-to-get-to-solna-via-public-transport',
-    note: 'Stockholm City’den (T-Centralen’in yanında) Solna station’a pendeltåg ile 7 dakika; hatlar 40, 41, 42.',
+    note: 'Commuter train from Stockholm City (next to T-Centralen) to Solna station takes 7 minutes; lines 40, 41, 42.',
+  },
+  {
+    id: 'wiki-stations',
+    title: 'Wikipedia – station articles (coordinates)',
+    url: 'https://en.wikipedia.org/wiki/List_of_Stockholm_metro_stations',
+    note: 'Coordinates taken from the infobox of each station article (retrieved October 2026).',
+  },
+  {
+    id: 'basemap',
+    title: 'Basemap – © OpenStreetMap contributors, © CARTO',
+    url: 'https://carto.com/attributions',
+    note: 'Raster street map loaded in the browser at run time. Only for context; no model value depends on it.',
   },
   {
     id: 'assumption',
-    title: 'Model varsayımı',
-    note: 'Gerçek değer bulunamadı; makul bir başlangıç değeri. İşletmeci verisiyle değiştirilmeli.',
+    title: 'Model assumption',
+    note: 'No published value found; a reasonable starting value to be replaced with operator data.',
   },
   {
     id: 'optimizer',
-    title: 'Metro İkizi optimizasyonu (scripts/optimize.ts)',
-    note: 'Bütçe ve kısıtlar altında dağılma süresini en aza indiren plan; simülasyonla doğrulandı.',
+    title: 'Metro Twin optimizer (scripts/optimize.ts)',
+    note: 'Plan that minimises dispersion time under the budget and constraints; validated by simulation.',
   },
   {
     id: 'synthetic',
-    title: 'Sentetik üretim',
-    note: 'Yayınlanmış günlük toplamlardan model tarafından üretildi (gün içi dağılım, varış istasyonları).',
+    title: 'Synthetic generation',
+    note: 'Generated by the model from published daily totals (time-of-day profile, destinations).',
   },
 ];
 
-/** 2019 değerlerini 2022 düzeyine taşıma katsayısı: 912 000 / 1 266 000 */
+/** Factor to bring 2019 values to the 2022 level: 912,000 / 1,266,000 */
 export const SCALE_2019_TO_2022 = 912_000 / 1_266_000;

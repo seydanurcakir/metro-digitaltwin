@@ -3,7 +3,7 @@ import { SCALE_2019_TO_2022 } from './sources';
 
 const pub2022 = (v: number): Sourced<number> => ({
   value: v,
-  src: { kind: 'published', ref: 'sl-fakta-2022', note: 'İstasyon yalnızca Kırmızı Hat ile hizmet alıyor; istasyon toplamı = Kırmızı Hat.' },
+  src: { kind: 'published', ref: 'sl-fakta-2022', note: 'Station served only by the red line; station total = red line.' },
 });
 
 const scaled2019 = (v2019: number): Sourced<number> => ({
@@ -11,21 +11,21 @@ const scaled2019 = (v2019: number): Sourced<number> => ({
   src: {
     kind: 'derived',
     ref: 'wiki-red-line',
-    note: `2019 Kırmızı Hat değeri ${v2019} × 0,72 (2022/2019 metro toplam oranı). Aktarma istasyonu: yalnız Kırmızı Hat binişi.`,
+    note: `2019 red line value ${v2019} × 0.72 (2022/2019 metro total ratio). Interchange station: red line boardings only.`,
   },
 });
 
 const assume = (v: number, note: string): Sourced<number> => ({ value: v, src: { kind: 'assumption', ref: 'assumption', note } });
 
 const platform = (major: boolean): Platform => ({
-  usableAreaM2: assume(major ? 900 : 600, 'Ada peron, ~145 m uzunluk; kenar güvenlik şeritleri ve merdivenler hariç bekleme alanı tahmini.'),
-  areaShareByDirection: assume(0.5, 'Ada peronda iki yön alanı eşit paylaşır.'),
-  lengthM: assume(145, '3 ünitelik C20 treni (3 × 46,5 m) alacak uzunluk.'),
+  usableAreaM2: assume(major ? 900 : 600, 'Island platform, ~145 m long; estimated waiting area excluding edge safety strips and stairs.'),
+  areaShareByDirection: assume(0.5, 'On an island platform both directions share the area equally.'),
+  lengthM: assume(145, 'Long enough for a 3-unit C20 train (3 × 46.5 m).'),
 });
 
 type Row = [id: string, name: string, boardings: Sourced<number>, major: boolean];
 
-// Fruängen'den Mörby centrum'a sırayla.
+// In order from Fruängen to Mörby centrum.
 const ROWS: Row[] = [
   ['fruangen', 'Fruängen', pub2022(6_700), false],
   ['vastertorp', 'Västertorp', pub2022(3_200), false],
@@ -62,20 +62,20 @@ const stations: Station[] = ROWS.map(([id, name, boardings, major], order) => {
     onTrunk,
     boardingsPerDay: boardings,
     lineShare: onTrunk
-      ? assume(0.5, 'Ortak gövdede T13 ve T14 eşit sıklıkta; binişlerin yarısı T14 trenlerine.')
-      : { value: 1, src: { kind: 'derived', ref: 'wiki-red-line', note: 'İstasyona yalnız T14 uğruyor.' } },
-    dwellSec: assume(major ? 45 : 30, major ? 'Büyük aktarma istasyonu, uzun kapı açık süresi.' : 'Standart kapı açık süresi.'),
+      ? assume(0.5, 'T13 and T14 run equally often on the shared trunk; half of the boardings use T14 trains.')
+      : { value: 1, src: { kind: 'derived', ref: 'wiki-red-line', note: 'Only T14 calls at this station.' } },
+    dwellSec: assume(major ? 45 : 30, major ? 'Major interchange, long dwell.' : 'Standard dwell.'),
     platform: platform(major),
   };
 });
 
-// İstasyonlar arası yolculuk süreleri (sn). Gerçek tarife (GTFS) ile değiştirilmeli.
+// Running times between stations (s). To be replaced with the real timetable (GTFS).
 const RUN_TIMES = [90, 75, 90, 75, 120, 120, 75, 75, 90, 60, 75, 90, 75, 75, 150, 120, 105, 90];
 
 const segments: Segment[] = RUN_TIMES.map((sec, i) => ({
   from: stations[i].id,
   to: stations[i + 1].id,
-  runTimeSec: assume(sec, 'Tahmini; Trafiklab GTFS tarifesiyle doğrulanmalı.'),
+  runTimeSec: assume(sec, 'Estimate; to be checked against the Trafiklab GTFS timetable.'),
 }));
 
 export const LINE_T14: Line = {
@@ -84,13 +84,13 @@ export const LINE_T14: Line = {
   color: '#D2382F',
   stations,
   segments,
-  turnaroundSec: assume(240, 'Son durakta dönüş ve sürücü/sistem hazırlığı.'),
+  turnaroundSec: assume(240, 'Turnaround and driver/system preparation at the terminal.'),
   trunk: {
     fromStationId: stations[TRUNK_FROM].id,
     toStationId: stations[TRUNK_TO].id,
     maxTrainsPerHour: {
       value: 24,
-      src: { kind: 'published', ref: 'wiki-red-line', note: 'Zirvede Östermalmstorg–Liljeholmen arası 2,5 dakikada bir tren.' },
+      src: { kind: 'published', ref: 'wiki-red-line', note: 'In the peak a train every 2.5 minutes between Östermalmstorg and Liljeholmen.' },
     },
   },
 };

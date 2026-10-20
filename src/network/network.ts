@@ -1,5 +1,5 @@
-// Ağ katmanı: istasyonlar düğüm, ray bölümleri ve aktarma geçitleri kenar.
-// Her hat kendi veri setinde (Line) tutulur; ağ bunları ve hatlar arası aktarmaları birbirine bağlar.
+// Network layer: stations are nodes; track sections and transfer passages are edges.
+// Each line keeps its own dataset (Line); the network ties them and the transfers between them together.
 
 import type { Line, LineId, LineMode, ServicePlan, Sourced } from '../types';
 import { SERVICE_START_MIN, SLOT_MINUTES } from '../data/time';
@@ -8,19 +8,19 @@ export interface NetworkNode {
   id: string;
   name: string;
   mode: LineMode;
-  /** Bu düğüme uğrayan hatlar */
+  /** Lines calling at this node */
   lines: LineId[];
-  /** Hangi hat veri setinde tanımlı */
+  /** Which line dataset defines it */
   lineKey: string;
   boardingsPerDay: Sourced<number>;
-  platform: { lengthM: Sourced<number>; usableAreaM2: Sourced<number>; type: 'ada' };
+  platform: { lengthM: Sourced<number>; usableAreaM2: Sourced<number>; type: 'island' };
   dwellSec: Sourced<number>;
   isBoundary: boolean;
 }
 
 export interface Signalling {
   system: Sourced<string>;
-  /** İki tren arasındaki en kısa süre */
+  /** Minimum time between two trains */
   minHeadwaySec: Sourced<number>;
 }
 
@@ -32,10 +32,10 @@ export interface NetworkEdge {
   lineKey?: string;
   lines: LineId[];
   travelTimeSec: Sourced<number>;
-  /** Ray kenarı: yön başına saatte en fazla tren; aktarma kenarı: yön başına saatte yolcu */
+  /** Track edge: max trains per hour per direction; transfer edge: passengers per hour per direction */
   capacity?: { trainsPerHour?: Sourced<number>; paxPerHour?: Sourced<number> };
   signalling?: Signalling;
-  /** Kenar iki yönde de kullanılabilir */
+  /** The edge can be used in both directions */
   bidirectional: true;
 }
 
@@ -43,9 +43,9 @@ export interface LineEntry {
   key: string;
   line: Line;
   plan: ServicePlan;
-  /** Ortak gövdedeki ray kenarlarının sinyalizasyonu */
+  /** Signalling of the track edges on the shared trunk */
   trunkSignalling?: Signalling;
-  /** Gövde dışındaki ray kenarlarının sinyalizasyonu */
+  /** Signalling of the track edges off the trunk */
   signalling?: Signalling;
 }
 
@@ -72,11 +72,11 @@ export function buildNetwork(lines: LineEntry[], transfers: TransferSpec[]): Net
     const trunkFrom = line.stations.find((s) => s.id === line.trunk.fromStationId)!.order;
     const trunkTo = line.stations.find((s) => s.id === line.trunk.toStationId)!.order;
     for (const s of line.stations) {
-      if (nodes.has(s.id)) throw new Error(`Düğüm iki kez tanımlandı: ${s.id}`);
+      if (nodes.has(s.id)) throw new Error(`Node defined twice: ${s.id}`);
       nodes.set(s.id, {
         id: s.id, name: s.name, mode, lines: s.servedBy, lineKey: e.key,
         boardingsPerDay: s.boardingsPerDay,
-        platform: { lengthM: s.platform.lengthM, usableAreaM2: s.platform.usableAreaM2, type: 'ada' },
+        platform: { lengthM: s.platform.lengthM, usableAreaM2: s.platform.usableAreaM2, type: 'island' },
         dwellSec: s.dwellSec, isBoundary: !!s.isBoundary,
       });
     }
@@ -84,11 +84,11 @@ export function buildNetwork(lines: LineEntry[], transfers: TransferSpec[]): Net
       const onTrunk = i >= trunkFrom && i < trunkTo;
       const signalling = onTrunk ? e.trunkSignalling : e.signalling;
       const boundary = line.stations[i].isBoundary || line.stations[i + 1].isBoundary;
-      // Gövde dışında kapasite, sinyalizasyonun izin verdiği en kısa aralıktan türetilir
+      // Off the trunk, capacity is derived from the minimum headway the signalling allows
       const capacity = onTrunk
         ? { trainsPerHour: line.trunk.maxTrainsPerHour }
         : signalling && !boundary
-          ? { trainsPerHour: { value: Math.floor(3600 / signalling.minHeadwaySec.value), src: { kind: 'derived' as const, ref: signalling.minHeadwaySec.src.ref, note: `3600 / ${signalling.minHeadwaySec.value} sn en kısa aralık (teorik üst sınır).` } } }
+          ? { trainsPerHour: { value: Math.floor(3600 / signalling.minHeadwaySec.value), src: { kind: 'derived' as const, ref: signalling.minHeadwaySec.src.ref, note: `3600 / ${signalling.minHeadwaySec.value} s minimum headway (theoretical upper bound).` } } }
           : undefined;
       edges.push({
         id: `${e.key}:${g.from}-${g.to}`, from: g.from, to: g.to, kind: 'track', lineKey: e.key,
@@ -100,7 +100,7 @@ export function buildNetwork(lines: LineEntry[], transfers: TransferSpec[]): Net
     });
   }
   for (const t of transfers) {
-    if (!nodes.has(t.from) || !nodes.has(t.to)) throw new Error(`Aktarma düğümü yok: ${t.id}`);
+    if (!nodes.has(t.from) || !nodes.has(t.to)) throw new Error(`Transfer node missing: ${t.id}`);
     edges.push({
       id: t.id, from: t.from, to: t.to, kind: 'transfer', lines: [], travelTimeSec: t.walkSec,
       capacity: { paxPerHour: t.capacityPaxPerHour }, bidirectional: true,
@@ -109,7 +109,7 @@ export function buildNetwork(lines: LineEntry[], transfers: TransferSpec[]): Net
   return { nodes, edges, lines: new Map(lines.map((l) => [l.key, l])) };
 }
 
-/** Bir hattın t anındaki sefer aralığı (dk) */
+/** Headway of a line at time t (min) */
 export function headwayAt(entry: LineEntry, t: number): number {
   const i = Math.max(0, Math.min(entry.plan.slots.length - 1, Math.floor((t - SERVICE_START_MIN * 60) / (SLOT_MINUTES * 60))));
   return entry.plan.slots[i].headwayMin;
@@ -131,9 +131,9 @@ export interface Route {
 }
 
 /**
- * t anında yola çıkan bir yolcu için en kısa güzergâh (Dijkstra).
- * Bir hatta binerken beklenen bekleme = sefer aralığının yarısı; ara duraklarda tren bekleme süresi eklenir.
- * Sanal sınır düğümleri güzergâhta kullanılmaz.
+ * Shortest route for a passenger setting off at time t (Dijkstra).
+ * Expected wait when boarding a line = half the headway; dwell at intermediate stops is added.
+ * Virtual boundary nodes are never used in a route.
  */
 export function route(net: Network, from: string, to: string, t: number): Route | null {
   type State = { node: string; line: string | null };

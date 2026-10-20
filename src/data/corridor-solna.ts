@@ -1,9 +1,9 @@
-// Pendeltåg koridoru: Stockholm City – Stockholm Odenplan – Solna – Ulriksdal (hatlar J40, J41, J42X).
-// Solna istasyonu bu koridorun ana düğümü. Koridorun iki ucunda koridor dışından gelen ve
-// dışarı giden yolcuyu temsil eden sanal sınır düğümleri var; ölçütlere dahil edilmezler.
+// Commuter rail corridor: Stockholm City – Stockholm Odenplan – Solna – Ulriksdal (lines J40, J41, J42X).
+// Solna station is the main node of this corridor. At both ends virtual boundary nodes represent passengers
+// coming from and going beyond the corridor; they are excluded from metrics.
 //
-// Kapsam: yalnızca temel ulaşım operasyonu. İstasyon çevresindeki cazibe merkezleri (AVM, stadyum)
-// ve etkinlik kaynaklı yığılmalar bu aşamada modellenmez.
+// Scope: core transport operations only. Attractions around the station (mall, stadium) and
+// event-driven crowding are not modelled at this stage.
 
 import type { Constraints, Fleet, Line, OtherLineService, Platform, PlanSlot, ServicePlan, Sourced, Station } from '../types';
 import { SLOTS } from './time';
@@ -15,12 +15,12 @@ const derived = <T,>(v: T, ref: string, note: string): Sourced<T> => ({ value: v
 
 const platform = (areaM2: number, lengthM: number, note: string): Platform => ({
   usableAreaM2: assume(areaM2, note),
-  areaShareByDirection: assume(0.5, 'Ada peronda iki yön alanı eşit paylaşır.'),
-  lengthM: assume(lengthM, 'İki üniteli X60 (214 m) alacak uzunluk.'),
+  areaShareByDirection: assume(0.5, 'On an island platform both directions share the area equally.'),
+  lengthM: assume(lengthM, 'Long enough for a two-unit X60 (214 m).'),
 });
 
 const BOUNDARY_NOTE =
-  'Koridor dışından gelen yolcu akışı (kalibrasyon varsayımı). Pendeltåg toplamı 342 000/gün; koridor hatları ~yarısı; koridor istasyonları çıkarılıp sınırı geçen pay tahmin edildi.';
+  'Passenger flow from beyond the corridor (calibration assumption). Commuter rail total 342,000/day; corridor lines ~half; the share crossing the boundary was estimated after removing the corridor stations.';
 
 type Row = {
   id: string;
@@ -35,42 +35,42 @@ type Row = {
 
 const ROWS: Row[] = [
   {
-    id: 'sinir-guney', name: 'Güney sınırı (Stockholms södra yönü)', boundary: true,
-    boardings: assume(45_000, BOUNDARY_NOTE), share: assume(1, 'Sanal düğüm.'), dwell: assume(0, 'Sanal düğüm.'),
-    platform: platform(100_000, 214, 'Sanal düğüm: kapasite kısıtı yok.'),
+    id: 'boundary-south', name: 'South boundary (towards Stockholms södra)', boundary: true,
+    boardings: assume(45_000, BOUNDARY_NOTE), share: assume(1, 'Virtual node.'), dwell: assume(0, 'Virtual node.'),
+    platform: platform(100_000, 214, 'Virtual node: no capacity constraint.'),
   },
   {
     id: 'stockholm-city', name: 'Stockholm City', trunk: true,
-    boardings: pub(54_800, 'sl-fakta-2022', 'Pendeltåg, kış iş günü; otomatik sayım.'),
-    share: assume(0.5, 'City’de binenlerin J40/J41/J42X trenlerine düşen payı; Citybanan’ı J43/J43X/J44 ile paylaşırlar.'),
-    dwell: assume(60, 'Merkez istasyon, peron kapılı; uzun kapı açık süresi.'),
-    platform: platform(2_600, 250, 'Peron kapılı ada peron; bekleme alanı tahmini.'),
+    boardings: pub(54_800, 'sl-fakta-2022', 'Commuter rail, winter weekday; automatic counts.'),
+    share: assume(0.5, 'Share of City boardings using J40/J41/J42X trains; they share Citybanan with J43/J43X/J44.'),
+    dwell: assume(60, 'Central station with platform screen doors; long dwell.'),
+    platform: platform(2_600, 250, 'Island platform with screen doors; estimated waiting area.'),
   },
   {
     id: 'stockholm-odenplan', name: 'Stockholm Odenplan', trunk: true,
-    boardings: pub(34_800, 'sl-fakta-2022', 'Pendeltåg, kış iş günü; otomatik sayım.'),
-    share: assume(0.5, 'Odenplan’dan sonra J40/J41/J42X Solna’ya, J43/J44 Sundbyberg’e ayrılır.'),
-    dwell: assume(45, 'Standart pendeltåg kapı açık süresi.'),
-    platform: platform(2_000, 250, 'Ada peron; bekleme alanı tahmini.'),
+    boardings: pub(34_800, 'sl-fakta-2022', 'Commuter rail, winter weekday; automatic counts.'),
+    share: assume(0.5, 'After Odenplan J40/J41/J42X continue to Solna and J43/J44 to Sundbyberg.'),
+    dwell: assume(45, 'Standard commuter rail dwell.'),
+    platform: platform(2_000, 250, 'Island platform; estimated waiting area.'),
   },
   {
     id: 'solna', name: 'Solna station',
-    boardings: pub(16_000, 'sl-fakta-2022', 'Pendeltåg, kış iş günü; otomatik sayım. (2019: 20 900, wiki-solna)'),
-    share: derived(1, 'wiki-solna', 'Solna’da yalnızca J40, J41 ve 42X durur.'),
-    dwell: assume(45, 'Standart pendeltåg kapı açık süresi.'),
-    platform: platform(1_600, 225, 'Tek ada peron (wiki-solna); ~225 m × ~7 m kullanılabilir genişlik.'),
+    boardings: pub(16_000, 'sl-fakta-2022', 'Commuter rail, winter weekday; automatic counts. (2019: 20,900, wiki-solna)'),
+    share: derived(1, 'wiki-solna', 'Only J40, J41 and 42X call at Solna.'),
+    dwell: assume(45, 'Standard commuter rail dwell.'),
+    platform: platform(1_600, 225, 'Single island platform (wiki-solna); ~225 m × ~7 m usable width.'),
   },
   {
     id: 'ulriksdal', name: 'Ulriksdal',
-    boardings: pub(4_300, 'sl-fakta-2022', 'Pendeltåg, kış iş günü.'),
-    share: derived(1, 'wiki-solna', 'Solna–Ulriksdal arasında yalnızca J40, J41, 42X çalışır.'),
-    dwell: assume(40, 'Küçük istasyon.'),
-    platform: platform(1_200, 225, 'Ada peron; bekleme alanı tahmini.'),
+    boardings: pub(4_300, 'sl-fakta-2022', 'Commuter rail, winter weekday.'),
+    share: derived(1, 'wiki-solna', 'Only J40, J41 and 42X run between Solna and Ulriksdal.'),
+    dwell: assume(40, 'Small station.'),
+    platform: platform(1_200, 225, 'Island platform; estimated waiting area.'),
   },
   {
-    id: 'sinir-kuzey', name: 'Kuzey sınırı (Märsta / Uppsala yönü)', boundary: true,
-    boardings: assume(35_000, BOUNDARY_NOTE), share: assume(1, 'Sanal düğüm.'), dwell: assume(0, 'Sanal düğüm.'),
-    platform: platform(100_000, 214, 'Sanal düğüm: kapasite kısıtı yok.'),
+    id: 'boundary-north', name: 'North boundary (towards Märsta / Uppsala)', boundary: true,
+    boardings: assume(35_000, BOUNDARY_NOTE), share: assume(1, 'Virtual node.'), dwell: assume(0, 'Virtual node.'),
+    platform: platform(100_000, 214, 'Virtual node: no capacity constraint.'),
   },
 ];
 
@@ -88,53 +88,53 @@ const stations: Station[] = ROWS.map((r, order) => ({
   platform: r.platform,
 }));
 
-// Bölüm süreleri (sn). City → Solna toplamı 7 dk (solna-stad): 150 + 45 (Odenplan) + 225.
+// Section running times (s). City → Solna totals 7 min (solna-stad): 150 + 45 (Odenplan dwell) + 225.
 const RUN: [number, Sourced<number>][] = [
-  [0, assume(180, 'Sanal: güney sınırından City’ye.')],
-  [1, derived(150, 'solna-stad', 'City → Solna 7 dk; City–Odenplan payı tahmini.')],
-  [2, derived(225, 'solna-stad', 'City → Solna 7 dk eksi City–Odenplan ve Odenplan beklemesi.')],
-  [3, assume(240, 'Solna → Ulriksdal tahmini; Trafiklab GTFS ile doğrulanmalı.')],
-  [4, assume(180, 'Sanal: Ulriksdal’dan kuzey sınırına.')],
+  [0, assume(180, 'Virtual: south boundary to City.')],
+  [1, derived(150, 'solna-stad', 'City → Solna 7 min; City–Odenplan part estimated.')],
+  [2, derived(225, 'solna-stad', 'City → Solna 7 min minus City–Odenplan and the Odenplan dwell.')],
+  [3, assume(240, 'Solna → Ulriksdal estimate; to be checked against Trafiklab GTFS.')],
+  [4, assume(180, 'Virtual: Ulriksdal to the north boundary.')],
 ];
 
 export const CORRIDOR_SOLNA: Line = {
   id: 'J41',
   lineIds: ['J40', 'J41', 'J42X'],
   mode: 'commuter',
-  name: 'Pendeltåg J40/J41/J42X · Stockholm City – Solna – Ulriksdal',
+  name: 'Commuter rail J40/J41/J42X · Stockholm City – Solna – Ulriksdal',
   color: '#E8618C',
   stations,
   segments: RUN.map(([i, t]) => ({ from: stations[i].id, to: stations[i + 1].id, runTimeSec: t })),
-  turnaroundSec: assume(300, 'Sanal uçlar; filo kontrolü için.'),
+  turnaroundSec: assume(300, 'Virtual ends; used for fleet checks.'),
   trunk: {
     fromStationId: 'stockholm-city',
     toStationId: 'stockholm-odenplan',
-    maxTrainsPerHour: pub(16, 'wiki-citybanan', 'Citybanan yön başına saatte 24 tren; bunun en fazla 16’sı pendeltåg.'),
+    maxTrainsPerHour: pub(16, 'wiki-citybanan', 'Citybanan carries 24 trains/h per direction, at most 16 of them commuter trains.'),
   },
 };
 
 export const FLEET_X60: Fleet = {
   unitType: {
     id: 'X60',
-    seats: pub(374, 'wiki-x60', 'Ünite başına kabul edildi (kaynak çelişkili).'),
-    standing: pub(530, 'wiki-x60', 'Ünite başına kabul edildi (kaynak çelişkili).'),
+    seats: pub(374, 'wiki-x60', 'Taken per unit (the source is ambiguous).'),
+    standing: pub(530, 'wiki-x60', 'Taken per unit (the source is ambiguous).'),
     lengthM: pub(107.1, 'wiki-x60'),
   },
-  allowedUnitsPerTrain: pub([1, 2], 'wiki-x60', 'Tek ünite veya iki ünite (214 m).'),
-  unitsAvailable: assume(40, 'Koridor hatlarına ayrılan ünite tahmini.'),
+  allowedUnitsPerTrain: pub([1, 2], 'wiki-x60', 'Single unit or two units (214 m).'),
+  unitsAvailable: assume(40, 'Estimated units allocated to the corridor lines.'),
 };
 
 export const CORRIDOR_CONSTRAINTS: Constraints = {
-  minHeadwayMin: derived(2.5, 'wiki-citybanan', 'Citybanan saatte 24 tren → 2,5 dk sinyal aralığı (ATC-2).'),
-  maxHeadwayMin: assume(15, 'Erken sabah ve gece hizmet aralığı.'),
-  maxLoadFactor: assume(0.9, 'Ürün kuralı: doluluk ≤ %90.'),
-  platformDensityLimit: assume(2.0, 'Peronda güvenli yoğunluk eşiği (kişi/m²).'),
+  minHeadwayMin: derived(2.5, 'wiki-citybanan', 'Citybanan 24 trains/h → 2.5 min signalling headway (ATC-2).'),
+  maxHeadwayMin: assume(15, 'Early morning and late evening headway.'),
+  maxLoadFactor: assume(0.9, 'Product rule: load ≤ 90%.'),
+  platformDensityLimit: assume(2.0, 'Safe platform density threshold (people/m²).'),
 };
 
-/** Koridorun yön dengesizliği: sabah merkeze (City), akşam dışarı. Solna bir iş merkezi olduğu için T14’ten zayıf. */
+/** Directional bias of the corridor: towards the centre (City) in the morning, outwards in the evening. Weaker than T14 because Solna is itself an employment centre. */
 export const CORRIDOR_BIAS: Sourced<Bias> = assume(
   { am: 1.0, pm: 0.7, centerStationId: 'stockholm-city' },
-  'Sabah City yönüne varışlar ×2, akşam dışarı ×1,7. Solna’ya ters yönlü işe gidişler nedeniyle T14’ten zayıf tutuldu.',
+  'Morning destinations towards City ×2, evening outwards ×1.7. Kept weaker than T14 because of reverse commuting to Solna.',
 );
 
 const toMin = (s: string) => {
@@ -146,7 +146,7 @@ type Band = { from: string; to: string; headwayMin: number; unitsPerTrain: numbe
 const fromBands = (bands: Band[]): PlanSlot[] =>
   SLOTS.map((s) => {
     const b = bands.find((x) => s.startMin >= toMin(x.from) && s.startMin < toMin(x.to));
-    if (!b) throw new Error(`Koridor planı dilimi kapsanmıyor: ${s.label}`);
+    if (!b) throw new Error(`Corridor plan does not cover slot ${s.label}`);
     return { slotIndex: s.index, headwayMin: b.headwayMin, unitsPerTrain: b.unitsPerTrain };
   });
 
@@ -154,7 +154,7 @@ const inPeak = (startMin: number) => (startMin >= toMin('06:30') && startMin < t
 
 export const CORRIDOR_PLAN: ServicePlan = {
   id: 'corridor-current',
-  name: 'Pendeltåg mevcut tarife (Solna)',
+  name: 'Commuter rail current timetable (Solna)',
   kind: 'current',
   slots: fromBands([
     { from: '05:00', to: '06:00', headwayMin: 15, unitsPerTrain: 1 },
@@ -168,27 +168,27 @@ export const CORRIDOR_PLAN: ServicePlan = {
   src: {
     kind: 'derived',
     ref: 'wiki-pendeltag',
-    note: 'Gündüz J41 15 dk + J40 30 dk ≈ 10 dk; zirvede ek seferlerle ortalama 7,5 dk; erken/geç 30’ar dk iki hat ≈ 15 dk. Saat sınırları ve ünite sayıları varsayım.',
+    note: 'Daytime J41 every 15 min + J40 every 30 min ≈ 10 min; about 7.5 min in the peak with extra trains; early/late two lines every 30 min ≈ 15 min. Hour boundaries and unit counts are assumptions.',
   },
 };
 
-/** Citybanan’ı paylaşan diğer pendeltåg hatları (J43, J43X, J44): zirvede 8, gündüz 6, diğer saatler 4 tren/saat */
+/** Other commuter lines sharing Citybanan (J43, J43X, J44): 8 trains/h in the peak, 6 daytime, 4 otherwise */
 export const CITYBANAN_OTHER: OtherLineService = {
   lineId: 'J43',
   trainsPerHourBySlot: SLOTS.map((s) => (inPeak(s.startMin) ? 8 : s.startMin >= toMin('06:00') && s.startMin < toMin('21:00') ? 6 : 4)),
   src: {
     kind: 'derived',
     ref: 'wiki-citybanan',
-    note: 'Citybanan pendeltåg kapasitesi 16 tren/saat; zirvede koridor hatları 8 kullanır, kalan 8 diğer hatlar varsayıldı.',
+    note: 'Citybanan commuter capacity is 16 trains/h; in the peak the corridor lines use 8, the remaining 8 are assumed for the other lines.',
   },
 };
 
-/** Aktarma: T-Centralen ↔ Stockholm City yürüme bağlantısı */
+/** Transfer: walking link T-Centralen ↔ Stockholm City */
 export const TRANSFER_TC_CITY = {
-  walkSec: assume(300, 'T-Centralen ile Stockholm City arası yürüyen merdivenli geçit; ortalama 5 dk tahmini.'),
-  capacityPaxPerHour: assume(8_000, 'Yön başına yürüyen merdiven ve geçit kapasitesi tahmini.'),
-  /** T14’ten T-Centralen’de inenlerin pendeltåg’a aktarma payı */
-  metroToCommuterShare: assume(0.2, 'T14’ten T-Centralen’de inenlerin %20’si pendeltåg’a aktarır.'),
-  /** Aktaranların koridor hatlarına (J40/J41/J42X) ve yönlere dağılımı */
-  corridorShareByDirection: assume({ north: 0.25, south: 0.25 }, 'Aktaranların yarısı kuzeye, yarısı güneye; her yönde trenlerin yarısı koridor hatlarıdır.'),
+  walkSec: assume(300, 'Escalator passage between T-Centralen and Stockholm City; about 5 min on average (estimate).'),
+  capacityPaxPerHour: assume(8_000, 'Estimated escalator and passage capacity per direction.'),
+  /** Share of T14 passengers alighting at T-Centralen who transfer to commuter rail */
+  metroToCommuterShare: assume(0.2, '20% of T14 passengers alighting at T-Centralen transfer to commuter rail.'),
+  /** How transferring passengers split over the corridor lines (J40/J41/J42X) and directions */
+  corridorShareByDirection: assume({ north: 0.25, south: 0.25 }, 'Half of the transferring passengers go north, half south; in each direction half of the trains are corridor lines.'),
 };

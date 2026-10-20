@@ -1,14 +1,14 @@
-// Metro İkizi — sefer planı optimizasyonu (Adım 6).
+// Metro Twin — service plan optimisation.
 //
-// Problem: her 15 dakikalık dilim için sefer aralığı ve tren uzunluğu seç.
-//   Amaç   : yolcu ağırlıklı dağılma süresini (P90 ≈ 0,9 × sefer aralığı) en aza indir
-//   Bütçe  : toplam ünite-sefer ≤ bütçe (varsayılan: mevcut tarifeninki, yani ek maliyet yok)
-//   Kısıtlar: ortak gövde (T13 + T14 ≤ 24 tren/saat), filo, en kısa/en uzun sefer aralığı,
-//             en yüklü bölümde doluluk ≤ %90 (statik akış tahmini)
-// Yöntem: çoklu seçimli sırt çantası problemi → dinamik programlama (kesin çözüm, statik model için).
-// Sonra plan simülasyonla doğrulanır; doluluk ya da peron yoğunluğu sınırı aşılan dilimlerde
-// kapasite payı artırılıp yeniden çözülür. Trenler son duraktan kalkıştan ~20 dk sonra merkeze
-// ulaştığı için ihlal, kendinden önceki dilimlerde de sıkılaştırılır (önceden önlem).
+// Problem: choose headway and train length for every 15-minute slot.
+//   Objective  : minimise passenger-weighted dispersion time (P90 ≈ 0.9 × headway)
+//   Budget     : total unit-trips ≤ budget (default: the current timetable's, i.e. no extra cost)
+//   Constraints: shared trunk (T13 + T14 ≤ 24 trains/h), fleet, min/max headway,
+//                load on the busiest section ≤ 90% (static flow estimate)
+// Method: multiple-choice knapsack → dynamic programming (exact for the static model).
+// The plan is then validated by simulation; in slots where load or platform density limits are exceeded
+// the capacity margin is raised and the problem solved again. Trains reach the centre ~20 min after leaving
+// the terminal, so a violation also tightens the slots before it (acting in advance).
 
 import type { Direction, PlanSlot, ServicePlan, TwinDataset } from '../types';
 import { simulate, type SimOptions } from '../sim/engine';
@@ -21,7 +21,7 @@ export const HEADWAY_OPTIONS = [4, 5, 6, 7.5, 10];
 export interface OptimizeInput {
   id: string;
   name: string;
-  /** Toplam ünite-sefer bütçesi (iki yön). Verilmezse mevcut tarifeninki. */
+  /** Total unit-trip budget (both directions). Defaults to the current timetable's. */
   budgetUnitTrips?: number;
   sim?: SimOptions;
   maxIterations?: number;
@@ -34,25 +34,25 @@ export interface OptimizeReport {
   budgetUnitTrips: number;
   usedUnitTrips: number;
   iterations: number;
-  /** Simülasyonda hâlâ sınırı aşan dilimler (en iyi çaba) */
+  /** Slots still over a limit in simulation (best effort) */
   remainingIssues: SlotIssue[];
-  /** Kapasite payı artırılan dilimler */
+  /** Slots whose capacity margin was raised */
   tightenedSlots: number[];
 }
 
 const SLOT_SEC = SLOT_MINUTES * 60;
 const START = SERVICE_START_MIN * 60;
 
-/** Bir dilimdeki ünite-sefer (iki yön), 4 ile çarpılmış tam sayı */
+/** Unit-trips in one slot (both directions), as an integer multiplied by 4 */
 const cost4 = (h: number, u: number) => Math.round((2 * 4 * (SLOT_MINUTES / h)) * u);
 
-/** Dilim bazında en yüklü bölümdeki saatlik yolcu akışı (iki yön içinde en büyüğü) */
+/** Hourly passenger flow on the busiest section per slot (the larger of the two directions) */
 export function peakLinkFlows(ds: TwinDataset, sim: SimOptions = {}): number[] {
   const { line, demand } = ds;
   const n = line.stations.length;
   const order = new Map(line.stations.map((s) => [s.id, s.order]));
   const mult = sim.demandMultiplier ?? 1;
-  // Ek kalabalığı dilimlere dağıt
+  // Spread extra crowds over the slots
   const extra = new Map<string, number>();
   for (const s of sim.surges ?? []) {
     for (const sl of SLOTS) {
@@ -121,12 +121,12 @@ export function optimizePlan(ds: TwinDataset, input: OptimizeInput): OptimizeRep
   };
 
   const solve = (): PlanSlot[] => {
-    // Her dilimde uygun seçenekler: ihtiyaç = bu ve sonraki dilimin akışı (trenler merkeze ~20 dk'da varır) × pay
+    // Feasible options per slot: need = flow of this and the next slot (trains reach the centre in ~20 min) × margin
     const opts = SLOTS.map((_, s) => {
       const need = Math.max(flows[s], flows[Math.min(nS - 1, s + 1)]) * margin[s];
       const all = allOpts(s);
       const ok = all.filter((o) => o.cap >= need);
-      // Hiçbiri yetmiyorsa en yüksek kapasiteli seçenek (en iyi çaba)
+      // If none is enough, take the highest-capacity option (best effort)
       return ok.length ? ok : [all.reduce((a, b) => (b.cap > a.cap ? b : a))];
     });
     const INF = Number.POSITIVE_INFINITY;
@@ -137,7 +137,7 @@ export function optimizePlan(ds: TwinDataset, input: OptimizeInput): OptimizeRep
       const next = new Float64Array(B4 + 1).fill(INF);
       const ch = new Int8Array(B4 + 1).fill(-1);
       opts[s].forEach((o, k) => {
-        // Amaç: yolcu × beklenen P90 (dk); eşitlikte daha ucuz seçenek
+        // Objective: passengers × expected P90 (min); on ties the cheaper option
         const val = weight[s] * 0.9 * o.h + o.c * 1e-6;
         for (let b = 0; b + o.c <= B4; b++) {
           if (dp[b] === INF) continue;
@@ -150,7 +150,7 @@ export function optimizePlan(ds: TwinDataset, input: OptimizeInput): OptimizeRep
     }
     let best = -1;
     for (let b = 0; b <= B4; b++) if (dp[b] < INF && (best < 0 || dp[b] < dp[best])) best = b;
-    if (best < 0) throw new Error('Bütçe içinde uygun plan yok');
+    if (best < 0) throw new Error('No feasible plan within the budget');
     const out: PlanSlot[] = new Array(nS);
     for (let s = nS - 1; s >= 0; s--) {
       const o = opts[s][choice[s][best]];
@@ -182,7 +182,7 @@ export function optimizePlan(ds: TwinDataset, input: OptimizeInput): OptimizeRep
   let it = 1;
   while (issues.length && it < maxIt) {
     for (const is of issues) {
-      // İhlalin görüldüğü dilim ve kendinden önceki iki dilim (trenlerin yola çıktığı zaman)
+      // The violating slot and the two before it (when those trains set off)
       for (let s = Math.max(0, is.slotIndex - 2); s <= is.slotIndex; s++) {
         margin[s] *= 1.2;
         tightened.add(s);
@@ -212,12 +212,12 @@ function makePlan(input: OptimizeInput, slots: PlanSlot[], budget: number): Serv
     src: {
       kind: 'derived',
       ref: 'optimizer',
-      note: `Optimizasyon: bütçe ${budget} ünite-sefer, yolcu ağırlıklı dağılma süresi en aza indirildi, simülasyonla doğrulandı.`,
+      note: `Optimisation: budget ${budget} unit-trips, passenger-weighted dispersion time minimised, validated by simulation.`,
     },
   };
 }
 
-/** Raporlama yardımcısı: iki planın tüm gün ve pencere ölçütleri */
+/** Reporting helper: whole-day and window metrics of two plans */
 export function compareDay(ds: TwinDataset, a: ServicePlan, b: ServicePlan, sim?: SimOptions, stationId?: string) {
   const ra = simulate(ds, a, sim), rb = simulate(ds, b, sim);
   return { a: computeKpis(ds, ra, { stationId }), b: computeKpis(ds, rb, { stationId }) };

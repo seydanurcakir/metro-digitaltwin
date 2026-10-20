@@ -9,16 +9,16 @@ export const FLEET: Fleet = {
   },
   allowedUnitsPerTrain: {
     value: [2, 3],
-    src: { kind: 'published', ref: 'wiki-c20', note: 'Trenler 2 (kısa) veya 3 (uzun) üniteden oluşur.' },
+    src: { kind: 'published', ref: 'wiki-c20', note: 'Trains run as 2 (short) or 3 (long) units.' },
   },
   unitsAvailable: {
     value: 54,
-    src: { kind: 'assumption', ref: 'assumption', note: '18 uzun tren. İşletmecinin T14 filo tahsisiyle değiştirilmeli.' },
+    src: { kind: 'assumption', ref: 'assumption', note: '18 long trains. To be replaced with the operator’s T14 fleet allocation.' },
   },
 };
 
-/** Bir ünitenin toplam kapasitesi (oturma + ayakta) */
+/** Total capacity of one unit (seated + standing) */
 export const unitCapacity = (f: Fleet = FLEET): number => f.unitType.seats.value + f.unitType.standing.value;
 
-/** Bir trenin kapasitesi */
+/** Capacity of a train */
 export const trainCapacity = (units: number, f: Fleet = FLEET): number => units * unitCapacity(f);

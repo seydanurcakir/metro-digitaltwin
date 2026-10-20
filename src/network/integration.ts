@@ -1,7 +1,7 @@
-// T14 ile pendeltåg koridorunun entegrasyonu.
-// T14 simülasyonunda T-Centralen’de inen yolcuların bir kısmı yürüyerek Stockholm City peronuna gelir.
-// Stockholm City’nin yayınlanmış binişi aktaranları zaten içerdiği için, aktarma akışı kadar yolcu
-// yürüyerek gelen talepten düşülür: istasyonun günlük toplamı korunur, yalnızca zamanlaması T14’e bağlanır.
+// Integration of T14 with the commuter rail corridor.
+// Some passengers alighting at T-Centralen in the T14 simulation walk to the Stockholm City platforms.
+// Stockholm City's published boardings already include transfers, so the transfer flow is subtracted from
+// the walk-in demand: the station's daily total is kept and only its timing is tied to T14.
 
 import type { Direction, SimResult, Surge, TwinDataset } from '../index';
 import { buildWeekdayProfile } from '../data/time';
@@ -18,11 +18,11 @@ export const SOLNA_ID = 'solna';
 
 export interface TransferStream {
   surges: Surge[];
-  /** Günlük aktaran yolcu (koridor trenlerine, iki yön) */
+  /** Daily transferring passengers (to corridor trains, both directions) */
   daily: Record<Direction, number>;
 }
 
-/** T14’te T-Centralen’de inen yolcudan Stockholm City koridor peronlarına gelen akış */
+/** Flow from T14 passengers alighting at T-Centralen to the Stockholm City corridor platforms */
 export function transferStream(t14: TwinDataset, t14Result: SimResult): TransferStream {
   const walk = TRANSFER_TC_CITY.walkSec.value;
   const share = TRANSFER_TC_CITY.metroToCommuterShare.value;
@@ -35,7 +35,7 @@ export function transferStream(t14: TwinDataset, t14Result: SimResult): Transfer
     for (const dir of ['north', 'south'] as Direction[]) {
       const n = e.alighted * share * byDir[dir];
       if (n <= 0) continue;
-      // İnen yolcular 60 sn içinde perondan ayrılır, sonra yürür
+      // Alighting passengers leave the platform within 60 s, then walk
       surges.push({ stationId: 'stockholm-city', direction: dir, startSec: e.t + walk, endSec: e.t + walk + 60, passengers: n });
       daily[dir] += n;
     }
@@ -49,8 +49,8 @@ export interface Corridor {
 }
 
 /**
- * Solna koridorunun veri seti. `referenceTransfer`: City talebinden düşülecek günlük aktarma
- * (mevcut tarife ile hesaplanır; böylece T14 planı değişince toplam değil yalnızca zamanlama değişir).
+ * Dataset of the Solna corridor. `referenceTransfer`: daily transfer to subtract from City demand
+ * (computed with the current timetable, so changing the T14 plan changes the timing, not the total).
  */
 export function buildCorridor(t14: TwinDataset, t14Result: SimResult, referenceTransfer?: TransferStream): Corridor {
   const transfer = transferStream(t14, t14Result);
@@ -73,20 +73,20 @@ export function buildCorridor(t14: TwinDataset, t14Result: SimResult, referenceT
 
 const ATC2: Signalling = {
   system: { value: 'ATC-2', src: { kind: 'published', ref: 'wiki-citybanan' } },
-  minHeadwaySec: { value: 150, src: { kind: 'derived', ref: 'wiki-citybanan', note: 'Saatte 24 tren → 150 sn.' } },
+  minHeadwaySec: { value: 150, src: { kind: 'derived', ref: 'wiki-citybanan', note: '24 trains per hour → 150 s.' } },
 };
 const ATC2_MAINLINE: Signalling = {
-  system: { value: 'ATC-2', src: { kind: 'assumption', ref: 'assumption', note: 'İsveç ana hat standardı; Citybanan ile aynı varsayıldı.' } },
-  minHeadwaySec: { value: 180, src: { kind: 'assumption', ref: 'assumption', note: 'Ostkustbanan blok aralığı tahmini.' } },
+  system: { value: 'ATC-2', src: { kind: 'assumption', ref: 'assumption', note: 'Swedish mainline standard; assumed the same as Citybanan.' } },
+  minHeadwaySec: { value: 180, src: { kind: 'assumption', ref: 'assumption', note: 'Estimated Ostkustbanan block headway.' } },
 };
 
-/** T14 + Solna koridoru + T-Centralen ↔ Stockholm City aktarması */
+/** T14 + Solna corridor + T-Centralen ↔ Stockholm City transfer */
 export function buildStockholmNetwork(t14: TwinDataset, corridor: Corridor): Network {
   return buildNetwork(
     [
       { key: 'T14', line: t14.line, plan: t14.plans.find((p) => p.kind === 'current')! },
       { key: 'PENDEL-SOLNA', line: corridor.ds.line, plan: corridor.ds.plans[0], trunkSignalling: ATC2, signalling: ATC2_MAINLINE },
     ],
-    [{ id: 'aktarma:t-centralen-stockholm-city', from: TC_ID, to: CITY_ID, walkSec: TRANSFER_TC_CITY.walkSec, capacityPaxPerHour: TRANSFER_TC_CITY.capacityPaxPerHour }],
+    [{ id: 'transfer:t-centralen-stockholm-city', from: TC_ID, to: CITY_ID, walkSec: TRANSFER_TC_CITY.walkSec, capacityPaxPerHour: TRANSFER_TC_CITY.capacityPaxPerHour }],
   );
 }

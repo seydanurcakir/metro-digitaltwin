@@ -1,33 +1,80 @@
-// Ağ sekmesi: Solna istasyonu ve T-Centralen bağlantısı. Değerler koridor simülasyonundan (app/twin/network.ts) gelir.
+// Network tab: the T-Centralen ⇄ Solna connection, with every commuter train in the corridor tracked live.
+// Values come from the corridor simulation (app/twin/network.ts) and the shared train kinematics.
 import { useTwin } from '../twin/store';
-import { getCorridor, recentTransfer, routeNow } from '../twin/network';
-import { fmtClock, fmtSecs } from '../twin/selectors';
+import { recentTransfer, routeNow } from '../twin/network';
+import { fmtClock, fmtInt, fmtSecs, pct } from '../twin/selectors';
+import { LINES, TWINS } from '../twin/world';
+import { trainPose } from '../twin/trainpose';
 import { loadColor } from '../scene/palette';
-import { SLOTS } from '../../src/index';
+import { trainAt, SLOTS, type Trip } from '../../src/index';
 import { SERVICE_START_MIN, SLOT_MINUTES } from '../../src/data/time';
 
-const fmtInt = (n: number) => Math.round(n).toLocaleString('tr-TR');
-const pct = (x: number) => `%${Math.round(x * 100)}`;
+const P = LINES.PENDEL;
+const STATIONS = P.line.stations;
+const shortName = (i: number) => (STATIONS[i].isBoundary ? (i === 0 ? 'south of City' : 'north of Ulriksdal') : STATIONS[i].name.replace('Stockholm ', ''));
 
-function Schematic() {
-  // T-Centralen (metro) — yürüme — Stockholm City — Odenplan — Solna — Ulriksdal
-  const W = 320, y = 34;
-  const xs = [14, 92, 162, 236, 306];
-  const names = ['T-Centralen', 'City', 'Odenplan', 'Solna', 'Ulriksdal'];
+interface LiveTrain {
+  trip: Trip;
+  s: number;
+  where: string;
+  load: number;
+}
+
+/** Commuter trains on the corridor at t, south to north */
+function liveTrains(trips: Trip[], loads: Map<number, number[]>, t: number): LiveTrain[] {
+  const out: LiveTrain[] = [];
+  for (const trip of trips) {
+    if (t < trip.stops[0].t || t > trip.stops[trip.stops.length - 1].t) continue;
+    const p = trainAt(P.motion, trip, t);
+    if (!p) continue;
+    const a = trip.stops[p.i].stationOrder;
+    const where = p.phase === 'dwell' ? `at ${shortName(a)}` : `${shortName(a)} → ${shortName(trip.stops[p.i + 1].stationOrder)}`;
+    const lf = loads.get(trip.id)?.[a] ?? 0;
+    out.push({ trip, s: p.s, where, load: lf });
+  }
+  return out.sort((x, y) => x.s - y.s);
+}
+
+function Corridor({ trains, t }: { trains: LiveTrain[]; t: number }) {
+  const select = useTwin.getState().select;
+  const sel = useTwin((s) => s.selection);
+  const al = P.al;
+  const W = 320, y = 46, padL = 16, padR = 16;
+  const s0 = al.arcOf['stockholm-city'] - 900, s1 = al.arcOf.ulriksdal + 900;
+  const x = (s: number) => padL + ((Math.max(s0, Math.min(s1, s)) - s0) / (s1 - s0)) * (W - padL - padR);
+  const named = ['stockholm-city', 'stockholm-odenplan', 'solna', 'ulriksdal'];
+  const xc = x(al.arcOf['stockholm-city']);
   return (
     <figure className="chart">
-      <figcaption className="label">Bağlantı</figcaption>
-      <svg viewBox={`0 0 ${W} 78`} width="100%" role="img" aria-label="T-Centralen’den 5 dakika yürüyerek Stockholm City’ye, oradan pendeltåg ile Odenplan üzerinden 7 dakikada Solna’ya">
-        <line x1={xs[0]} x2={xs[1]} y1={y} y2={y} stroke="var(--muted)" strokeWidth="2" strokeDasharray="3 4" />
-        <line x1={xs[1]} x2={xs[4]} y1={y} y2={y} stroke="var(--commuter)" strokeWidth="4" strokeLinecap="round" />
-        <text x={(xs[0] + xs[1]) / 2} y={y - 9} textAnchor="middle" className="axis">yürüme 5 dk</text>
-        <text x={(xs[1] + xs[3]) / 2} y={y - 9} textAnchor="middle" className="axis">pendeltåg 7 dk</text>
-        {xs.map((x, i) => (
-          <g key={names[i]}>
-            <circle cx={x} cy={y} r={i === 3 ? 7 : 5} fill={i === 3 ? 'var(--commuter)' : 'var(--panel)'} stroke={i === 0 ? 'var(--line)' : 'var(--commuter)'} strokeWidth="2.5" />
-            <text x={x} y={y + 24} textAnchor={i === 0 ? 'start' : i === 4 ? 'end' : 'middle'} className={i === 3 ? 'axis strong' : 'axis'}>{names[i]}</text>
+      <figcaption className="label">Live: commuter trains between Stockholm City and Ulriksdal · {fmtClock(t)}</figcaption>
+      <svg viewBox={`0 0 ${W} 104`} width="100%" role="img" aria-label={`${trains.length} commuter trains on the corridor`}>
+        <line x1={padL - 10} x2={xc} y1={y} y2={y} stroke="var(--commuter)" strokeWidth="3" opacity="0.4" />
+        <line x1={x(al.arcOf.ulriksdal)} x2={W - padR + 10} y1={y} y2={y} stroke="var(--commuter)" strokeWidth="3" opacity="0.4" />
+        <line x1={xc} x2={x(al.arcOf.ulriksdal)} y1={y} y2={y} stroke="var(--commuter)" strokeWidth="4" strokeLinecap="round" />
+        {/* Walking link from T-Centralen (metro) down to Stockholm City */}
+        <line x1={xc} x2={xc} y1={y + 22} y2={y + 6} stroke="var(--muted)" strokeWidth="1.5" strokeDasharray="3 3" />
+        <circle cx={xc} cy={y + 27} r="5" fill="var(--panel)" stroke="var(--line)" strokeWidth="2.5" />
+        <text x={xc + 9} y={y + 31} className="axis">T-Centralen (T14) · 5 min walk</text>
+        {named.map((id) => (
+          <g key={id}>
+            <circle cx={x(al.arcOf[id])} cy={y} r={id === 'solna' ? 6.5 : 4.5} fill={id === 'solna' ? 'var(--commuter)' : 'var(--panel)'} stroke="var(--commuter)" strokeWidth="2.2" />
+            <text x={x(al.arcOf[id])} y={y - 26} textAnchor="middle" className={id === 'solna' ? 'axis strong-c' : 'axis'}>{STATIONS.find((s) => s.id === id)!.name.replace('Stockholm ', '')}</text>
           </g>
         ))}
+        {trains.map((tr) => {
+          const north = tr.trip.direction === 'north';
+          const cx = x(tr.s);
+          const cy = north ? y - 12 : y + 12;
+          const on = sel?.kind === 'train' && sel.line === 'PENDEL' && sel.tripId === tr.trip.id;
+          const d = north ? `M${cx - 7} ${cy - 4} H${cx + 4} L${cx + 8} ${cy} L${cx + 4} ${cy + 4} H${cx - 7} Z` : `M${cx + 7} ${cy - 4} H${cx - 4} L${cx - 8} ${cy} L${cx - 4} ${cy + 4} H${cx + 7} Z`;
+          return (
+            <path key={tr.trip.id} d={d} fill={loadColor(tr.load)} stroke={on ? 'var(--fg)' : 'var(--panel)'} strokeWidth={on ? 2 : 1}
+              className="corridor-train" onClick={() => select({ kind: 'train', line: 'PENDEL', tripId: tr.trip.id })}>
+              <title>{`Train ${P.code(tr.trip.id)} · ${tr.where} · ${pct(tr.load)} full`}</title>
+            </path>
+          );
+        })}
+        <text x={padL - 10} y={y + 52} className="axis">↑ northbound above · ↓ southbound below</text>
       </svg>
     </figure>
   );
@@ -47,8 +94,8 @@ function DaySeries({ values, t }: { values: number[]; t: number }) {
   const idx = Math.max(0, Math.min(n - 1, Math.floor((t - SERVICE_START_MIN * 60) / (SLOT_MINUTES * 60))));
   return (
     <figure className="chart">
-      <figcaption className="label">Gün boyu peronda ortalama kişi (15 dk)</figcaption>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Solna peronunda en kalabalık dilim ${SLOTS[values.indexOf(Math.max(...values))].label}`}>
+      <figcaption className="label">Solna: average people on the platform (15 min)</figcaption>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Busiest slot on the Solna platform: ${SLOTS[values.indexOf(Math.max(...values))].label}`}>
         {ticks.map((v) => (
           <g key={v}>
             <line x1={L} x2={W} y1={y(v)} y2={y(v)} stroke="var(--border)" />
@@ -67,12 +114,24 @@ function DaySeries({ values, t }: { values: number[]; t: number }) {
   );
 }
 
+const loadCache = new WeakMap<object, Map<number, number[]>>();
+
 export function NetworkPanel() {
   const t = useTwin((s) => Math.floor(s.t));
-  const planId = useTwin((s) => s.planId);
-  const scenario = useTwin((s) => s.scenario);
-  const v = getCorridor(planId, scenario);
-  const st = v.solna.stateAt(t);
+  const v = useTwin((s) => s.corridor);
+  const following = useTwin((s) => s.follow);
+  const { select, setFollow, focusTwin, flyTo } = useTwin.getState();
+  let loads = loadCache.get(v.result);
+  if (!loads) {
+    loads = new Map();
+    for (const e of v.result.events) {
+      let a = loads.get(e.tripId);
+      if (!a) loads.set(e.tripId, (a = new Array(STATIONS.length).fill(0)));
+      a[e.stationOrder] = e.capacity ? e.loadAfter / e.capacity : 0;
+    }
+    loadCache.set(v.result, loads);
+  }
+  const trains = liveTrains(v.result.trips, loads, t);
   const r = routeNow(v, t);
   const tr = recentTransfer(v, t);
   const totals = v.series.reduce((a, x) => ({ in: a.in + x.entries, out: a.out + x.exits }), { in: 0, out: 0 });
@@ -82,64 +141,69 @@ export function NetworkPanel() {
     wait: r.legs.filter((l) => l.kind === 'wait').reduce((a, l) => a + l.sec, 0),
     ride: r.legs.filter((l) => l.kind === 'ride' || l.kind === 'dwell').reduce((a, l) => a + l.sec, 0),
   } : null;
-  const next = [
-    { dir: 'north' as const, name: '↑ Ulriksdal' },
-    { dir: 'south' as const, name: '↓ Stockholm City' },
-  ];
+  const track = (trip: Trip) => {
+    select({ kind: 'train', line: 'PENDEL', tripId: trip.id });
+    setFollow({ line: 'PENDEL', tripId: trip.id });
+    const p = trainPose('PENDEL', trip, t);
+    if (p) flyTo(p.x, p.z, 1.6);
+  };
   return (
-    <section className="pane" aria-label="Ağ: Solna istasyonu">
+    <section className="pane" aria-label="Network: T-Centralen to Solna">
       <header className="insp-head">
         <span className="insp-icon commuter" aria-hidden="true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="5" cy="12" r="2.5" /><circle cx="19" cy="12" r="2.5" /><path d="M7.5 12 H16.5" /></svg>
         </span>
         <div className="insp-title">
-          <h2>Solna station</h2>
-          <p className="muted">Pendeltåg J40 · J41 · 42X · ada peron</p>
-          <span className="pill info">Temel operasyon</span>
+          <h2>T-Centralen ⇄ Solna</h2>
+          <p className="muted">Walk to Stockholm City, then commuter rail via Odenplan</p>
         </div>
       </header>
 
-      <Schematic />
+      <Corridor trains={trains} t={t} />
 
       <div className="mini-grid">
-        <div className="mini"><span className="label">Peronda</span><span className="mini-val num">{fmtInt(st.total)}</span><span className="muted mini-sub">doluluk {pct(st.occupancy)}</span></div>
-        <div className="mini"><span className="label">Yoğunluk</span><span className="mini-val num">{st.density.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span><span className="muted mini-sub">kişi/m² · sınır 2,00</span></div>
-        <div className="mini"><span className="label">Yolculuk</span><span className="mini-val num">{r ? fmtSecs(r.totalSec) : '–'}</span><span className="muted mini-sub">dk, T-Centralen’den</span></div>
+        <div className="mini"><span className="label">Journey now</span><span className="mini-val num">{r ? fmtSecs(r.totalSec) : '–'}</span><span className="muted mini-sub">min, T-Centralen → Solna</span></div>
+        <div className="mini"><span className="label">Trains on corridor</span><span className="mini-val num">{trains.length}</span><span className="muted mini-sub">{trains.filter((x) => x.trip.direction === 'north').length} north · {trains.filter((x) => x.trip.direction === 'south').length} south</span></div>
       </div>
-
       {legs && (
         <p className="net-legs num">
-          <span>yürüme <b>{fmtSecs(legs.walk)}</b></span>
-          <span>bekleme <b>{fmtSecs(legs.wait)}</b></span>
-          <span>yolculuk <b>{fmtSecs(legs.ride)}</b></span>
+          <span>walk <b>{fmtSecs(legs.walk)}</b></span>
+          <span>wait <b>{fmtSecs(legs.wait)}</b></span>
+          <span>ride <b>{fmtSecs(legs.ride)}</b></span>
         </p>
       )}
 
-      <div className="label">Sonraki trenler</div>
+      <div className="label">Track a train</div>
       <ul className="trains">
-        {next.map(({ dir, name }) => {
-          const n = st.next[dir];
+        {trains.map((x) => {
+          const on = following?.line === 'PENDEL' && following.tripId === x.trip.id;
           return (
-            <li key={dir}>
-              <div className="train-row static">
-                <span className="num eta">{n ? (n.inSec === 0 ? 'şimdi' : fmtSecs(n.inSec)) : '–'}</span>
-                <span className="train-code">{name}<span className="muted">{n ? ` · ${n.units}×X60` : ''}</span></span>
-                <span className="bar" aria-hidden="true"><span style={{ width: `${Math.min(100, (n?.loadFactorOnDeparture ?? 0) * 100)}%`, background: loadColor(n?.loadFactorOnDeparture ?? 0) }} /></span>
-                <span className="num">{n ? pct(n.loadFactorOnDeparture) : ''}</span>
-              </div>
+            <li key={x.trip.id}>
+              <button type="button" id={`track-${x.trip.id}`} className={`train-row track ${on ? 'on' : ''}`} onClick={() => track(x.trip)} aria-pressed={on}>
+                <span className="num eta">{x.trip.direction === 'north' ? '↑' : '↓'} {P.code(x.trip.id)}</span>
+                <span className="train-code">{x.where}<span className="muted"> · {x.trip.units}×X60</span></span>
+                <span className="bar" aria-hidden="true"><span style={{ width: `${Math.min(100, x.load * 100)}%`, background: loadColor(x.load) }} /></span>
+                <span className="num">{pct(x.load)}</span>
+              </button>
             </li>
           );
         })}
+        {trains.length === 0 && <li className="muted">No commuter trains running at this time.</li>}
       </ul>
+
+      <div className="btn-row">
+        <button type="button" id="net-open-solna" className="btn small" onClick={() => focusTwin('solna')}>Open Solna 3D twin</button>
+        <button type="button" id="net-open-tc" className="btn small" onClick={() => focusTwin('tc')}>Open T-Centralen 3D twin</button>
+      </div>
 
       <DaySeries values={v.series.map((x) => x.platformAvg)} t={t} />
 
       <dl className="facts">
-        <div className="fact"><dt>Günlük giriş / çıkış</dt><dd className="num">{fmtInt(totals.in)} / {fmtInt(totals.out)}</dd></div>
-        <div className="fact"><dt>En kalabalık dilim</dt><dd className="num">{peak.label} · {fmtInt(peak.platformMax)} kişi</dd></div>
-        <div className="fact"><dt>Son 15 dk’da T14’ten aktaran</dt><dd className="num">{fmtInt(tr)} kişi</dd></div>
+        <div className="fact"><dt>Solna entries / exits per day</dt><dd className="num">{fmtInt(totals.in)} / {fmtInt(totals.out)}</dd></div>
+        <div className="fact"><dt>Busiest slot at Solna</dt><dd className="num">{peak.label} · {fmtInt(peak.platformMax)} people</dd></div>
+        <div className="fact"><dt>T14 → commuter transfers, last 15 min</dt><dd className="num">{fmtInt(tr)} people</dd></div>
       </dl>
-      <p className="note muted">Saat {fmtClock(t)}. Solna’nın günlük binişi yayınlanmış veriden (16 000), gün içi dağılım sentetik. Çevredeki AVM, stadyum ve etkinlik etkisi bu aşamada modellenmedi.</p>
+      <p className="note muted">Solna's daily boardings are published ({fmtInt(TWINS.solna.station.boardingsPerDay.value)}); the time-of-day profile is synthetic. Nearby attractions (mall, stadium) and event crowds are not modelled at this stage.</p>
     </section>
   );
 }

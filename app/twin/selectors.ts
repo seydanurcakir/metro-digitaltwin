@@ -1,20 +1,35 @@
-// Saf fonksiyonlar: simülasyon sonucundan, verilen bir t anında sahnede ne görüneceğini hesaplar.
-import type { Direction, SimOptions, SimResult, TwinDataset } from '../../src/index';
+// Pure functions: from a simulation result, what the scene shows at time t.
+import { trainAt, type Direction, type SimOptions, type SimResult, type Trip, type TwinDataset } from '../../src/index';
 import { SERVICE_START_MIN, SLOT_MINUTES } from '../../src/data/time';
 import type { StationLayout } from './layout';
+import type { LineDef } from './world';
 
 const DIRS: Direction[] = ['north', 'south'];
+
+export interface StationCall {
+  tripId: number;
+  direction: Direction;
+  arrive: number;
+  depart: number;
+  units: number;
+  capacity: number;
+  loadFactor: number;
+  boarded: number;
+  alighted: number;
+  leftBehind: number;
+}
 
 export interface StationView {
   stationId: string;
   order: number;
   area: number;
   dwell: number;
-  /** Bu istasyondaki durak olayları, zamana göre sıralı */
+  /** Stop events at this station, sorted by time */
   events: SimResult['events'];
-  /** Bu istasyona uğrayan seferler */
-  calls: { tripId: number; direction: Direction; arrive: number; depart: number; units: number; capacity: number; loadFactor: number; boarded: number; alighted: number; leftBehind: number }[];
-  /** Dilim bazında geliş hızı (kişi/sn): rate[dir][slot] */
+  /** Trips calling at this station, sorted by arrival */
+  calls: StationCall[];
+  trips: Map<number, Trip>;
+  /** Arrival rate per slot (passengers/s): rate[dir][slot] */
   rate: [Float64Array, Float64Array];
   surges: NonNullable<SimOptions['surges']>;
 }
@@ -32,7 +47,7 @@ export function buildStationView(ds: TwinDataset, r: SimResult, stationId: strin
       tripId: tr.id, direction: tr.direction, arrive: stop.t, depart: stop.t + dwell, units: tr.units, capacity: tr.capacity,
       loadFactor: ev.loadAfter / ev.capacity, boarded: ev.boarded, alighted: ev.alighted, leftBehind: ev.leftBehind,
     }];
-  });
+  }).sort((a, b) => a.arrive - b.arrive);
   const nSlots = ds.demand.profile.slots.length;
   const rate: [Float64Array, Float64Array] = [new Float64Array(nSlots), new Float64Array(nSlots)];
   const mult = opts.demandMultiplier ?? 1;
@@ -40,14 +55,14 @@ export function buildStationView(ds: TwinDataset, r: SimResult, stationId: strin
     if (c.stationId === stationId) rate[c.direction === 'north' ? 0 : 1][c.slotIndex] = (c.arrivals * mult) / (SLOT_MINUTES * 60);
   return {
     stationId, order: st.order, area: st.platform.usableAreaM2.value, dwell: st.dwellSec.value,
-    events, calls, rate, surges: (opts.surges ?? []).filter((s) => s.stationId === stationId),
+    events, calls, trips: new Map(r.trips.map((t) => [t.id, t])), rate, surges: (opts.surges ?? []).filter((s) => s.stationId === stationId),
   };
 }
 
 const START = SERVICE_START_MIN * 60;
 const SLOT = SLOT_MINUTES * 60;
 
-/** [a, b) aralığında bir yönde perona gelen yolcu sayısı */
+/** Passengers arriving on the platform in one direction during [a, b) */
 export function arrivalsBetween(v: StationView, d: number, a: number, b: number): number {
   let sum = 0;
   let x = Math.max(a, START);
@@ -73,7 +88,7 @@ export interface PlatformState {
   density: number;
 }
 
-/** t anında perondaki yolcu sayısı: son tren olayından sonraki kuyruk + o andan beri gelenler */
+/** People on the platform at t: queue after the last train event + arrivals since then */
 export function platformAt(v: StationView, t: number): PlatformState {
   let lo = 0, hi = v.events.length - 1, idx = -1;
   while (lo <= hi) {
@@ -90,7 +105,7 @@ export function platformAt(v: StationView, t: number): PlatformState {
 export interface TrainState {
   tripId: number;
   direction: Direction;
-  /** Tren merkezinin x konumu */
+  /** Train centre along the platform axis (station frame) */
   x: number;
   z: number;
   units: number;
@@ -100,41 +115,43 @@ export interface TrainState {
   phase: 'arriving' | 'stopped' | 'departing';
 }
 
+/** Used for train status wording ("approaching", "departing") */
 export const APPROACH_SEC = 40;
-const APPROACH_DIST = 170;
 
-/** t anında istasyon çevresinde görünen trenler. Yavaşlayarak gelir, durur, hızlanarak gider. */
-export function trainsAt(v: StationView, lay: StationLayout, t: number): TrainState[] {
+/**
+ * Trains inside a twin's own zone at time t. Positions come from the shared kinematics (src/geo/motion),
+ * so a train leaving the zone continues seamlessly as a map-layer train.
+ */
+export function trainsAt(v: StationView, lay: StationLayout, line: LineDef, stationArc: number, t: number): TrainState[] {
   const out: TrainState[] = [];
-  for (const c of v.calls) {
-    if (t < c.arrive - APPROACH_SEC || t > c.depart + APPROACH_SEC) continue;
-    const sign = c.direction === 'north' ? 1 : -1;
-    const length = c.units * lay.unitLength + (c.units - 1) * 0.6;
-    const stopX = sign * (lay.platformLength / 2 - length / 2 - 2);
-    let x: number;
-    let phase: TrainState['phase'];
-    if (t < c.arrive) {
-      const u = (c.arrive - t) / APPROACH_SEC; // 1 → 0
-      x = stopX - sign * APPROACH_DIST * u * u;
-      phase = 'arriving';
-    } else if (t <= c.depart) {
-      x = stopX;
-      phase = 'stopped';
-    } else {
-      const u = (t - c.depart) / APPROACH_SEC; // 0 → 1
-      x = stopX + sign * APPROACH_DIST * u * u;
-      phase = 'departing';
-    }
+  const calls = v.calls;
+  // First call that could still be near the station
+  let lo = 0, hi = calls.length;
+  const from = t - 600;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (calls[mid].depart < from) lo = mid + 1; else hi = mid;
+  }
+  for (let k = lo; k < calls.length; k++) {
+    const c = calls[k];
+    if (c.arrive > t + 600) break;
+    const trip = v.trips.get(c.tripId);
+    if (!trip) continue;
+    const p = trainAt(line.motion, trip, t);
+    if (!p) continue;
+    const x = p.s - stationArc;
+    if (Math.abs(x) > lay.zoneHalf) continue;
+    const phase: TrainState['phase'] = t >= c.arrive && t <= c.depart ? 'stopped' : t < c.arrive ? 'arriving' : 'departing';
     out.push({
       tripId: c.tripId, direction: c.direction, x, z: c.direction === 'north' ? lay.trackZ.north : lay.trackZ.south,
-      units: c.units, length, doorsOpen: phase === 'stopped' && t > c.arrive + 3 && t < c.depart - 3,
+      units: c.units, length: p.length, doorsOpen: phase === 'stopped' && t > c.arrive + 3 && t < c.depart - 3,
       loadFactor: c.loadFactor, phase,
     });
   }
   return out;
 }
 
-/** Her yön için bir sonraki trenin gelmesine kalan süre (sn) */
+/** Seconds until the next train in each direction */
 export function nextArrivals(v: StationView, t: number): Record<Direction, number | null> {
   const res = { north: null, south: null } as Record<Direction, number | null>;
   for (const d of DIRS) {
@@ -144,7 +161,7 @@ export function nextArrivals(v: StationView, t: number): Record<Direction, numbe
   return res;
 }
 
-/** Sabit rastgele sayı üreteci */
+/** Seeded random number generator */
 export function rng(seed: number) {
   let s = seed % 2147483647;
   if (s <= 0) s += 2147483646;
@@ -152,8 +169,8 @@ export function rng(seed: number) {
 }
 
 /**
- * Peronun bir yarısında yolcuların duracağı yerler, öncelik sırasıyla.
- * İlk sıradakiler merdiven diplerine ve peron kenarına yakın; kalabalık arttıkça peron dolar.
+ * Standing spots on one half of the platform, in priority order.
+ * The first spots are near the escalator feet and the platform edge; the platform fills up as the crowd grows.
  */
 export function crowdSlots(lay: StationLayout, dir: Direction, max: number, seed: number): Float32Array {
   const r = rng(seed);
@@ -183,3 +200,6 @@ export const fmtClock = (t: number) => {
   return `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}`;
 };
 export const fmtSecs = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+export const fmtInt = (n: number) => Math.round(n).toLocaleString('en-US');
+export const fmtDec = (n: number, d = 2) => n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+export const pct = (x: number) => `${Math.round(x * 100)}%`;

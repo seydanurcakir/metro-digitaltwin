@@ -1,7 +1,7 @@
 import type { Demand, DemandCell, DemandProfile, Direction, Line, OdPeriod, OdRow, Sourced, Station } from '../types';
 import { DIRECTIONS } from '../types';
 
-/** Bir istasyonun bu hattaki günlük binişi = istasyon binişi × hat payı */
+/** Daily boardings of a station on this line = station boardings × line share */
 export const dailyLineBoardings = (line: Line): Record<string, number> =>
   Object.fromEntries(line.stations.map((s) => [s.id, s.boardingsPerDay.value * s.lineShare.value]));
 
@@ -12,7 +12,7 @@ export const DEFAULT_BIAS: Sourced<Bias> = {
   src: {
     kind: 'assumption',
     ref: 'assumption',
-    note: 'Sabah zirvesinde merkeze doğru varışların ağırlığı ×2,5; akşam zirvesinde merkezden dışarı ×2. Turnike + çıkış verisiyle kalibre edilmeli.',
+    note: 'In the morning peak, destinations towards the centre weigh ×2.5; in the evening peak, destinations away from the centre ×2. To be calibrated with gate entry + exit data.',
   },
 };
 
@@ -27,8 +27,8 @@ export const periodOf = (startMin: number): OdPeriod =>
   startMin >= AM_WINDOW[0] && startMin < AM_WINDOW[1] ? 'am' : startMin >= PM_WINDOW[0] && startMin < PM_WINDOW[1] ? 'pm' : 'base';
 
 /**
- * Çekim modeli: i'de binen yolcu j'ye, j'nin günlük binişiyle orantılı ağırlıkla gider.
- * Sabah zirvesinde merkeze (T-Centralen) daha yakın varışlar, akşam zirvesinde daha uzak varışlar ağırlaştırılır.
+ * Gravity model: a passenger boarding at i travels to j with a weight proportional to j's daily boardings.
+ * Destinations closer to the centre (T-Centralen) weigh more in the morning peak, farther ones in the evening peak.
  */
 function destWeight(line: Line, w: Record<string, number>, o: Station, d: Station, period: OdPeriod, bias: Bias): number {
   const c = line.stations.find((s) => s.id === bias.centerStationId)!.order;
@@ -61,7 +61,7 @@ export function buildOd(line: Line, bias: Bias): OdRow[] {
   return rows;
 }
 
-/** i istasyonundan binenlerin kuzeye gidenlerinin oranı (döneme göre) */
+/** Share of passengers boarding at i who travel north (by period) */
 export function northShare(line: Line, stationId: string, period: OdPeriod, bias: Bias): number {
   const w = dailyLineBoardings(line);
   const o = line.stations.find((s) => s.id === stationId)!;
@@ -77,9 +77,9 @@ export function northShare(line: Line, stationId: string, period: OdPeriod, bias
 }
 
 /**
- * Her dilim × istasyon × yön için perona gelen yolcu sayısı.
- * `arrivalsOverride`: bazı istasyonların perona yürüyerek gelen günlük yolcusu farklıysa (ör. aktarma akışı ayrı
- * modellendiğinde) o istasyonun değeri. Varış istasyonu çekimi her zaman yayınlanmış binişlerle hesaplanır.
+ * Passengers arriving on the platform for every slot × station × direction.
+ * `arrivalsOverride`: daily walk-in passengers for stations where this differs from boardings (e.g. when a transfer
+ * flow is modelled separately). Destination attraction always uses the published boardings.
  */
 export function buildDemand(line: Line, profile: DemandProfile, bias: Sourced<Bias> = DEFAULT_BIAS, arrivalsOverride: Record<string, number> = {}): Demand {
   const daily = { ...dailyLineBoardings(line), ...arrivalsOverride };
@@ -109,7 +109,7 @@ export function buildDemand(line: Line, profile: DemandProfile, bias: Sourced<Bi
     src: {
       kind: 'synthetic',
       ref: 'synthetic',
-      note: 'Günlük biniş (yayın) × gün içi eğri (sentetik) × yön payı (çekim modeli + zirve yön dengesizliği).',
+      note: 'Daily boardings (published) × time-of-day profile (synthetic) × direction share (gravity model + peak directional bias).',
     },
   };
 }

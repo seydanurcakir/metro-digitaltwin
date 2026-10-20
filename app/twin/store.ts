@@ -1,29 +1,43 @@
-// Uygulama durumu (Zustand). Zaman, oynatma, plan, senaryo ve seçili nesne burada.
+// App state (Zustand): time, playback, plan, scenario, focused station, selection and camera commands.
 import { create } from 'zustand';
-import { hhmmToSec, type Direction, type SimResult } from '../../src/index';
+import { hhmmToSec, type Direction, type SimOptions, type SimResult, type TwinDataset } from '../../src/index';
 import { SERVICE_END_MIN } from '../../src/data/time';
-import { DATASET, FOCUS_STATION_ID, SCENARIOS, getResult, type ScenarioId } from './model';
+import { DATASET, SCENARIOS, getResult, type ScenarioId } from './model';
+import { getCorridor, type CorridorView } from './network';
 import { buildStationView, type StationView } from './selectors';
-import { buildLayout, type StationLayout } from './layout';
+import { OVERVIEW, TWINS, type LineKey, type TwinId } from './world';
 import type { Scope, WindowId } from './metrics';
 
 export const SPEEDS = [1, 10, 30, 60] as const;
 export type Speed = (typeof SPEEDS)[number];
 
-const station = DATASET.line.stations.find((s) => s.id === FOCUS_STATION_ID)!;
-export const LAYOUT: StationLayout = buildLayout(DATASET, station);
-export const STATION = station;
-
-/** Sahnede tıklanıp incelenebilen nesneler */
+/** Objects that can be clicked and inspected */
 export type Selection =
-  | { kind: 'train'; tripId: number }
-  | { kind: 'platform'; direction: Direction }
-  | { kind: 'escalator'; index: number }
-  | { kind: 'station' }
+  | { kind: 'train'; line: LineKey; tripId: number }
+  | { kind: 'platform'; twin: TwinId; direction: Direction }
+  | { kind: 'escalator'; twin: TwinId; index: number }
+  | { kind: 'station'; line: LineKey; stationId: string }
   | null;
 
-const makeView = (r: SimResult, scenario: ScenarioId): StationView =>
-  buildStationView(DATASET, r, FOCUS_STATION_ID, SCENARIOS[scenario].options);
+/** A request to move the camera; Scene animates towards it */
+export interface CameraCommand {
+  seq: number;
+  x: number;
+  z: number;
+  zoom: number;
+  azimuth?: number;
+  /** Camera tilt from vertical (radians) */
+  polar?: number;
+}
+
+export type BasemapStatus = 'loading' | 'ok' | 'off' | 'unavailable';
+export type PanelId = 'inspect' | 'compare' | 'network';
+
+export interface LineData {
+  ds: TwinDataset;
+  result: SimResult;
+  opts: SimOptions;
+}
 
 interface TwinState {
   t: number;
@@ -31,15 +45,21 @@ interface TwinState {
   speed: Speed;
   planId: string;
   scenario: ScenarioId;
+  /** T14 simulation for the selected plan and scenario */
   result: SimResult;
-  view: StationView;
+  /** Commuter corridor simulation (depends on the T14 plan through transfers) */
+  corridor: CorridorView;
+  views: Record<TwinId, StationView>;
+  /** Station twin whose numbers the HUD shows */
+  focus: TwinId;
   selection: Selection;
   hover: boolean;
-  /** Karşılaştırma panelinin filtreleri */
+  follow: { line: LineKey; tripId: number } | null;
+  camera: CameraCommand | null;
+  basemap: BasemapStatus;
   compareWindow: WindowId;
   compareScope: Scope;
-  /** Sağ paneldeki sekme */
-  panel: 'inspect' | 'compare' | 'network';
+  panel: PanelId;
   tick: (dtReal: number) => void;
   setPlaying: (p: boolean) => void;
   setSpeed: (s: Speed) => void;
@@ -47,12 +67,46 @@ interface TwinState {
   jumpTo: (hhmm: string, scenario?: ScenarioId) => void;
   select: (s: Selection) => void;
   setHover: (h: boolean) => void;
+  focusTwin: (id: TwinId, fly?: boolean) => void;
+  flyTo: (x: number, z: number, zoom: number, azimuth?: number, polar?: number) => void;
+  overview: () => void;
+  setFollow: (f: { line: LineKey; tripId: number } | null) => void;
+  setBasemap: (b: BasemapStatus) => void;
   setCompare: (p: { window?: WindowId; scope?: Scope }) => void;
-  setPanel: (p: 'inspect' | 'compare' | 'network') => void;
+  setPanel: (p: PanelId) => void;
 }
 
 const END = SERVICE_END_MIN * 60;
-const initial = getResult('current', 'normal');
+export const TWIN_ZOOM = 4.2;
+export const TWIN_POLAR = 0.94;
+
+function build(planId: string, scenario: ScenarioId) {
+  const result = getResult(planId, scenario);
+  const corridor = getCorridor(planId, scenario);
+  const views: Record<TwinId, StationView> = {
+    tc: buildStationView(DATASET, result, TWINS.tc.stationId, SCENARIOS[scenario].options),
+    solna: buildStationView(corridor.corridor.ds, corridor.result, TWINS.solna.stationId, corridor.opts),
+  };
+  return { result, corridor, views };
+}
+
+/** Dataset, result and options of one line in the current state */
+export function lineData(s: Pick<TwinState, 'result' | 'corridor' | 'scenario'>, line: LineKey): LineData {
+  return line === 'T14'
+    ? { ds: DATASET, result: s.result, opts: SCENARIOS[s.scenario].options }
+    : { ds: s.corridor.corridor.ds, result: s.corridor.result, opts: s.corridor.opts };
+}
+
+/** Hook form of lineData that only re-renders when the underlying results change */
+export function useLineData(line: LineKey): LineData {
+  const result = useTwin((s) => s.result);
+  const corridor = useTwin((s) => s.corridor);
+  const scenario = useTwin((s) => s.scenario);
+  return lineData({ result, corridor, scenario }, line);
+}
+
+let seq = 0;
+const initial = build('current', 'normal');
 
 export const useTwin = create<TwinState>((set, get) => ({
   t: hhmmToSec('07:57'),
@@ -60,10 +114,13 @@ export const useTwin = create<TwinState>((set, get) => ({
   speed: 10,
   planId: 'current',
   scenario: 'normal',
-  result: initial,
-  view: makeView(initial, 'normal'),
+  ...initial,
+  focus: 'tc',
   selection: null,
   hover: false,
+  follow: null,
+  camera: null,
+  basemap: 'loading',
   compareWindow: 'day',
   compareScope: 'station',
   panel: 'inspect',
@@ -76,16 +133,19 @@ export const useTwin = create<TwinState>((set, get) => ({
   setPlaying: (playing) => set({ playing }),
   setSpeed: (speed) => set({ speed }),
   setPlan: (planId) => {
-    const r = getResult(planId, get().scenario);
-    // Plan değişince sefer numaraları değişir; seçili tren seçimini kaldır.
+    // Trip numbers change with the T14 plan; the corridor timetable itself is fixed.
     const sel = get().selection;
-    set({ planId, result: r, view: makeView(r, get().scenario), selection: sel?.kind === 'train' ? null : sel });
+    const fol = get().follow;
+    set({
+      planId, ...build(planId, get().scenario),
+      selection: sel?.kind === 'train' && sel.line === 'T14' ? null : sel,
+      follow: fol?.line === 'T14' ? null : fol,
+    });
   },
   jumpTo: (hhmm, scenario) => {
     const sc = scenario ?? get().scenario;
-    const r = getResult(get().planId, sc);
     const sel = get().selection;
-    set({ t: hhmmToSec(hhmm), scenario: sc, result: r, view: makeView(r, sc), selection: sel?.kind === 'train' ? null : sel });
+    set({ t: hhmmToSec(hhmm), scenario: sc, ...build(get().planId, sc), selection: sel?.kind === 'train' ? null : sel, follow: null });
   },
   select: (selection) => set(selection ? { selection, panel: 'inspect' } : { selection }),
   setHover: (hover) => {
@@ -94,6 +154,22 @@ export const useTwin = create<TwinState>((set, get) => ({
       set({ hover });
     }
   },
+  focusTwin: (id, fly = true) => {
+    if (get().focus !== id) set({ focus: id });
+    if (fly) {
+      const tw = TWINS[id];
+      set({ follow: null, camera: { seq: ++seq, x: tw.pos.x, z: tw.pos.z, zoom: TWIN_ZOOM, azimuth: tw.viewAzimuth, polar: TWIN_POLAR } });
+    }
+  },
+  flyTo: (x, z, zoom, azimuth, polar) => set({ camera: { seq: ++seq, x, z, zoom, azimuth, polar } }),
+  overview: () => {
+    // North up, nearly top-down; shift east so the corridor sits in the area not covered by the right-hand panels
+    const wide = typeof window !== 'undefined' && window.innerWidth >= 1280;
+    const shift = wide ? 196 / OVERVIEW.zoom : 0;
+    set({ follow: null, camera: { seq: ++seq, x: OVERVIEW.x + shift, z: OVERVIEW.z, zoom: OVERVIEW.zoom, azimuth: 0, polar: 0.38 } });
+  },
+  setFollow: (follow) => set({ follow }),
+  setBasemap: (basemap) => { if (get().basemap !== basemap) set({ basemap }); },
   setPanel: (panel) => set({ panel }),
   setCompare: ({ window, scope }) => set({ compareWindow: window ?? get().compareWindow, compareScope: scope ?? get().compareScope }),
 }));

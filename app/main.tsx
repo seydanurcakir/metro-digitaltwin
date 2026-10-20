@@ -8,7 +8,7 @@ import { p90Series } from './twin/metrics';
 import { getCorridor } from './twin/network';
 import './styles.css';
 
-/** Simülasyon saatini ilerletir (gerçek zaman × hız) */
+/** Advances the simulation clock (real time × speed) */
 function useClock() {
   useEffect(() => {
     let raf = 0;
@@ -24,7 +24,7 @@ function useClock() {
   }, []);
 }
 
-/** Diğer plan ve senaryoların simülasyonlarını boşta kalan zamanda önceden hesaplar (plan değiştirince takılma olmasın) */
+/** Pre-computes the other plans and scenarios in idle time, so switching plans does not stutter */
 function usePrewarm() {
   useEffect(() => {
     const jobs: (() => void)[] = [];
@@ -48,6 +48,9 @@ function usePrewarm() {
     };
   }, []);
 }
+
+// Test hook: ?debug exposes the store to automated checks
+if (new URLSearchParams(window.location.search).has('debug')) (window as unknown as Record<string, unknown>).__twin = useTwin;
 
 function App() {
   useClock();

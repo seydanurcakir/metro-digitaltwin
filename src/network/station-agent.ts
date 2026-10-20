@@ -1,5 +1,5 @@
-// İstasyon etmeni: bir istasyonu bağımsız bir nesne olarak temsil eder.
-// Simülasyon sonucundan herhangi bir t anındaki durumu (peron, trenler) ve 15 dakikalık KPI zaman serilerini üretir.
+// Station agent: represents one station as a self-contained object.
+// From a simulation result it produces the state at any time t (platform, trains) and 15-minute KPI time series.
 
 import type { Direction, TwinDataset } from '../types';
 import type { SimOptions, SimResult } from '../sim/engine';
@@ -15,9 +15,9 @@ export interface StationState {
   t: number;
   waiting: Record<Direction, number>;
   total: number;
-  /** kişi/m² */
+  /** people/m² */
   density: number;
-  /** Perondaki kişi / (alan × güvenli yoğunluk sınırı) */
+  /** People on the platform / (area × safe density limit) */
   occupancy: number;
   next: Record<Direction, { inSec: number; units: number; loadFactorOnDeparture: number } | null>;
 }
@@ -25,19 +25,19 @@ export interface StationState {
 export interface SlotKpi {
   slot: number;
   label: string;
-  /** Perona gelen (istasyona giren) yolcu */
+  /** Passengers arriving on the platform (entering the station) */
   entries: number;
-  /** Trenden inen (istasyondan çıkan) yolcu */
+  /** Passengers alighting (leaving the station) */
   exits: number;
   boarded: number;
-  /** Çıkanların toplam harekete oranı */
+  /** Exits as a share of all movements */
   exitShare: number;
   avgWaitSec: number;
   p90WaitSec: number;
   platformAvg: number;
   platformMax: number;
   densityMax: number;
-  /** Ortalama peron doluluk oranı (0–1+) */
+  /** Average platform occupancy (0–1+) */
   occupancyAvg: number;
   occupancyMax: number;
   trains: number;
@@ -59,8 +59,8 @@ export class StationAgent {
 
   constructor(private readonly ds: TwinDataset, private readonly r: SimResult, stationId: string, opts: SimOptions = {}) {
     const st = ds.line.stations.find((s) => s.id === stationId);
-    if (!st) throw new Error(`İstasyon yok: ${stationId}`);
-    if (st.isBoundary) throw new Error('Sanal sınır düğümü için etmen oluşturulmaz');
+    if (!st) throw new Error(`No such station: ${stationId}`);
+    if (st.isBoundary) throw new Error('No agent for a virtual boundary node');
     this.id = st.id;
     this.name = st.name;
     this.order = st.order;
@@ -80,7 +80,7 @@ export class StationAgent {
     }).sort((a, b) => a.arrive - b.arrive);
   }
 
-  /** [a, b) aralığında bir yönde perona gelen yolcu */
+  /** Passengers arriving on the platform in one direction during [a, b) */
   arrivals(dir: Direction, a: number, b: number): number {
     const d = dir === 'north' ? 0 : 1;
     let sum = 0;
@@ -116,12 +116,12 @@ export class StationAgent {
     return { t, waiting, total, density: total / this.area, occupancy: total / (this.area * this.limit), next };
   }
 
-  /** Belirli aralıklarla durum akışı (ör. her 60 sn) */
+  /** Stream of states at a fixed step (e.g. every 60 s) */
   *stream(fromSec: number, toSec: number, stepSec = 60): Generator<StationState> {
     for (let t = fromSec; t <= toSec; t += stepSec) yield this.stateAt(t);
   }
 
-  /** 15 dakikalık dilimlerle KPI zaman serisi */
+  /** KPI time series in 15-minute slots */
   timeSeries(sampleSec = 30): SlotKpi[] {
     const w = this.r.waits;
     return SLOTS.map((sl) => {
@@ -159,7 +159,7 @@ export class StationAgent {
     });
   }
 
-  /** Bilgi kartı */
+  /** Info card */
   info() {
     const st = this.ds.line.stations[this.order];
     return {

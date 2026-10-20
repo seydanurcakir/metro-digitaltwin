@@ -2,7 +2,7 @@ import type { DemandProfile, TimeSlot } from '../types';
 
 export const SLOT_MINUTES = 15;
 export const SERVICE_START_MIN = 5 * 60; // 05:00
-export const SERVICE_END_MIN = 25 * 60; // 01:00 (ertesi gün)
+export const SERVICE_END_MIN = 25 * 60; // 01:00 (next day)
 
 const pad = (n: number) => String(n).padStart(2, '0');
 export const minToLabel = (m: number): string => `${pad(Math.floor(m / 60) % 24)}:${pad(m % 60)}`;
@@ -25,8 +25,8 @@ export const slotIndexAt = (hhmm: string): number => {
 const gauss = (t: number, mu: number, sigma: number) => Math.exp(-((t - mu) ** 2) / (2 * sigma ** 2));
 
 /**
- * Tipik iş günü gün içi talep eğrisi (sentetik): sabah zirvesi 08:00, akşam zirvesi 16:45,
- * öğle düzlüğü ve sabah/gece düşük talep. Gerçek turnike verisi gelince bu eğri ölçülen dağılımla değişir.
+ * Typical weekday demand profile (synthetic): morning peak 08:00, evening peak 16:45,
+ * a midday plateau and low demand early and late. Replaced by the measured profile once gate data is available.
  */
 export function buildWeekdayProfile(): DemandProfile {
   const raw = SLOTS.map((s) => {
@@ -44,7 +44,7 @@ export function buildWeekdayProfile(): DemandProfile {
     src: {
       kind: 'synthetic',
       ref: 'synthetic',
-      note: 'Çift zirveli iş günü eğrisi. Ölçülmüş saatlik dağılım yerine geçici varsayım.',
+      note: 'Double-peaked weekday curve. Temporary assumption in place of a measured hourly profile.',
     },
   };
 }
