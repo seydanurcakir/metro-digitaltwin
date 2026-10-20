@@ -113,7 +113,7 @@ export function optimizePlan(ds: TwinDataset, input: OptimizeInput): OptimizeRep
       if (h < constraints.minHeadwayMin.value || h > constraints.maxHeadwayMin.value) continue;
       if (60 / h + otherLine.trainsPerHourBySlot[s] > line.trunk.maxTrainsPerHour.value + 1e-9) continue;
       for (const u of fleet.allowedUnitsPerTrain.value) {
-        if (Math.ceil(cycle / h) * u > fleet.unitsAvailableForT14.value) continue;
+        if (Math.ceil(cycle / h) * u > fleet.unitsAvailable.value) continue;
         out.push({ h, u, c: cost4(h, u), cap: maxLF * (60 / h) * u * unitCap });
       }
     }

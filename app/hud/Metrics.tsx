@@ -60,7 +60,7 @@ export function KpiStrip() {
         <div className="kpi">
           <span className="kpi-label">Hattaki tren</span>
           <span className="kpi-row"><span className="kpi-val num">{onLine.trains}</span><span className="kpi-sub inline">{onLine.units} ünite</span></span>
-          <span className="kpi-sub">filo {DATASET.fleet.unitsAvailableForT14.value} ünite</span>
+          <span className="kpi-sub">filo {DATASET.fleet.unitsAvailable.value} ünite</span>
         </div>
       </div>
     </section>

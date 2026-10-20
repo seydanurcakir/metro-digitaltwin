@@ -6,10 +6,39 @@ Stockholm metrosu Kırmızı Hat T14 (Fruängen – Mörby centrum) için simül
 
 ```bash
 npm install
-npm test        # veri modeli + simülasyon + uygulama + optimizasyon testleri
+npm test        # veri modeli + simülasyon + uygulama + optimizasyon + ağ testleri
 npm run dev     # 3B sahneyi tarayıcıda aç
 npm run build   # tek dosyalık sayfa: dist/
 ```
+
+## Adım 7: Ağ katmanı ve Solna istasyonu (`src/network/`)
+
+Solna station bir **pendeltåg** istasyonudur; T-Centralen’e metroyla bağlı değildir. Gerçek bağlantı: T-Centralen → (yürüme, ~5 dk) → Stockholm City → Stockholm Odenplan → Solna (7 dk, J40/J41/42X).
+
+| Dosya | İçerik |
+|---|---|
+| `src/data/corridor-solna.ts` | Pendeltåg koridoru: City, Odenplan, **Solna**, Ulriksdal + iki sanal sınır düğümü; X60 filo; tarife; Citybanan kısıtları; aktarma parametreleri |
+| `src/network/network.ts` | Ağ grafiği: düğümler (istasyonlar), ray kenarları (süre, kapasite, sinyalizasyon), aktarma kenarı; en kısa güzergâh |
+| `src/network/integration.ts` | T14 ↔ koridor entegrasyonu: T-Centralen’de inenlerin bir kısmı yürüyerek Stockholm City peronuna gelir |
+| `src/network/station-agent.ts` | `StationAgent`: anlık durum (`stateAt`), dakikalık akış (`stream`), 15 dakikalık KPI zaman serisi (`timeSeries`) |
+| `scripts/solna.ts` | `npm run solna` → `data/solna-timeseries.json` ve `.csv` |
+| `scripts/test-network.ts` | Ağ, entegrasyon ve Solna testleri |
+
+**T-Centralen ↔ Solna bağlantı parametreleri**
+
+| Kenar | Süre | Kapasite | Sinyalizasyon |
+|---|---|---|---|
+| T-Centralen → Stockholm City (aktarma) | 300 sn (varsayım) | 8 000 yolcu/saat (varsayım) | — |
+| Stockholm City → Odenplan (Citybanan) | 150 sn | 16 pendeltåg/saat/yön (yayın) | ATC-2, en kısa aralık 150 sn |
+| Odenplan → Solna | 225 sn | 20 tren/saat (türetilmiş) | ATC-2, 180 sn (varsayım) |
+
+City → Solna toplamı 7 dk (Solna stad).
+
+**Çift sayım yok:** Stockholm City’nin yayınlanmış binişi aktaranları zaten içerir. T14’ten gelen aktarma akışı kadar yolcu City’nin yürüyerek gelen talebinden düşülür; toplam korunur, aktarma dalgalarının zamanlaması T14 simülasyonundan gelir.
+
+**Kapsam:** Yalnızca temel ulaşım operasyonu. Solna çevresindeki cazibe merkezleri (AVM, stadyum) ve etkinlik yığılmaları bu aşamada modellenmedi.
+
+Uygulamada sağ paneldeki **Ağ · Solna** sekmesi canlı durumu gösterir.
 
 ## Canlıya alma (Netlify, ücretsiz)
 

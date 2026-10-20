@@ -1,9 +1,9 @@
 import type { Demand, DemandCell, DemandProfile, Direction, Line, OdPeriod, OdRow, Sourced, Station } from '../types';
 import { DIRECTIONS } from '../types';
 
-/** Bir istasyonun günlük T14 binişi = Kırmızı Hat binişi × T14 payı */
-export const dailyT14Boardings = (line: Line): Record<string, number> =>
-  Object.fromEntries(line.stations.map((s) => [s.id, s.redLineBoardingsPerDay.value * s.t14Share.value]));
+/** Bir istasyonun bu hattaki günlük binişi = istasyon binişi × hat payı */
+export const dailyLineBoardings = (line: Line): Record<string, number> =>
+  Object.fromEntries(line.stations.map((s) => [s.id, s.boardingsPerDay.value * s.lineShare.value]));
 
 export type Bias = { am: number; pm: number; centerStationId: string };
 
@@ -40,7 +40,7 @@ function destWeight(line: Line, w: Record<string, number>, o: Station, d: Statio
 }
 
 export function buildOd(line: Line, bias: Bias): OdRow[] {
-  const w = dailyT14Boardings(line);
+  const w = dailyLineBoardings(line);
   const rows: OdRow[] = [];
   for (const period of ['base', 'am', 'pm'] as OdPeriod[]) {
     for (const o of line.stations) {
@@ -63,7 +63,7 @@ export function buildOd(line: Line, bias: Bias): OdRow[] {
 
 /** i istasyonundan binenlerin kuzeye gidenlerinin oranı (döneme göre) */
 export function northShare(line: Line, stationId: string, period: OdPeriod, bias: Bias): number {
-  const w = dailyT14Boardings(line);
+  const w = dailyLineBoardings(line);
   const o = line.stations.find((s) => s.id === stationId)!;
   let north = 0;
   let all = 0;
@@ -76,9 +76,13 @@ export function northShare(line: Line, stationId: string, period: OdPeriod, bias
   return all === 0 ? 0 : north / all;
 }
 
-/** Her dilim × istasyon × yön için perona gelen yolcu sayısı */
-export function buildDemand(line: Line, profile: DemandProfile, bias: Sourced<Bias> = DEFAULT_BIAS): Demand {
-  const daily = dailyT14Boardings(line);
+/**
+ * Her dilim × istasyon × yön için perona gelen yolcu sayısı.
+ * `arrivalsOverride`: bazı istasyonların perona yürüyerek gelen günlük yolcusu farklıysa (ör. aktarma akışı ayrı
+ * modellendiğinde) o istasyonun değeri. Varış istasyonu çekimi her zaman yayınlanmış binişlerle hesaplanır.
+ */
+export function buildDemand(line: Line, profile: DemandProfile, bias: Sourced<Bias> = DEFAULT_BIAS, arrivalsOverride: Record<string, number> = {}): Demand {
+  const daily = { ...dailyLineBoardings(line), ...arrivalsOverride };
   const periodBySlot = profile.slots.map((s) => periodOf(s.startMin));
   const nsCache: Record<string, number> = {};
   for (const p of ['base', 'am', 'pm'] as OdPeriod[])

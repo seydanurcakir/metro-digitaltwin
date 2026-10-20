@@ -5,6 +5,7 @@ import { Hud } from './hud/Hud';
 import { useTwin } from './twin/store';
 import { UI_PLANS, getResult } from './twin/model';
 import { p90Series } from './twin/metrics';
+import { getCorridor } from './twin/network';
 import './styles.css';
 
 /** Simülasyon saatini ilerletir (gerçek zaman × hız) */
@@ -29,7 +30,7 @@ function usePrewarm() {
     const jobs: (() => void)[] = [];
     for (const sc of ['normal', 'surge'] as const)
       for (const p of UI_PLANS)
-        jobs.push(() => { getResult(p.id, sc); p90Series(p.id, sc, 'station'); p90Series(p.id, sc, 'line'); });
+        jobs.push(() => { getResult(p.id, sc); p90Series(p.id, sc, 'station'); p90Series(p.id, sc, 'line'); getCorridor(p.id, sc); });
     let id = 0;
     const hasIdle = typeof window.requestIdleCallback === 'function';
     const idle = (cb: () => void) => (hasIdle ? window.requestIdleCallback(cb, { timeout: 2000 }) : window.setTimeout(cb, 200));

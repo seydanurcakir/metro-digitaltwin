@@ -24,7 +24,7 @@ for (const [id, sim] of cases) {
   const { constraints: c, fleet, line, otherLine } = ds;
   check('Sefer aralığı sınırlar içinde', plan.slots.every((s) => s.headwayMin >= c.minHeadwayMin.value && s.headwayMin <= c.maxHeadwayMin.value));
   check('Ortak gövde ≤ 24 tren/saat', plan.slots.every((s) => 60 / s.headwayMin + otherLine.trainsPerHourBySlot[s.slotIndex] <= line.trunk.maxTrainsPerHour.value + 1e-9));
-  check('Filo yeterli', plan.slots.every((s) => Math.ceil(cycleTimeMin(line) / s.headwayMin) * s.unitsPerTrain <= fleet.unitsAvailableForT14.value));
+  check('Filo yeterli', plan.slots.every((s) => Math.ceil(cycleTimeMin(line) / s.headwayMin) * s.unitsPerTrain <= fleet.unitsAvailable.value));
   check('İşletme bütçesi aşılmıyor', planUnitTrips(plan) <= budget + 1e-9, `${planUnitTrips(plan)} / ${budget} ünite-sefer`);
 
   const rc = simulate(ds, current, sim), ro = simulate(ds, plan, sim);

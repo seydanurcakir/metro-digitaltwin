@@ -4,7 +4,7 @@ import {
   buildDataset, cycleTimeMin, unitsRequired, trainCapacity, SLOTS, slotIndexAt,
   type Direction, type ServicePlan, type TwinDataset,
 } from '../src/index';
-import { dailyT14Boardings } from '../src/data/demand';
+import { dailyLineBoardings } from '../src/data/demand';
 
 let failed = 0;
 const check = (name: string, ok: boolean, detail = '') => {
@@ -29,10 +29,10 @@ check('slotIndexAt("08:00") = 12', slotIndexAt('08:00') === 12);
 console.log('\n— Kaynak izlenebilirliği');
 const refs = new Set(ds.sources.map((s) => s.id));
 const allSrc = [
-  ...line.stations.flatMap((s) => [s.redLineBoardingsPerDay.src, s.t14Share.src, s.dwellSec.src, s.platform.usableAreaM2.src, s.platform.areaShareByDirection.src, s.platform.lengthM.src]),
+  ...line.stations.flatMap((s) => [s.boardingsPerDay.src, s.lineShare.src, s.dwellSec.src, s.platform.usableAreaM2.src, s.platform.areaShareByDirection.src, s.platform.lengthM.src]),
   ...line.segments.map((g) => g.runTimeSec.src),
   line.turnaroundSec.src, line.trunk.maxTrainsPerHour.src,
-  fleet.unitType.seats.src, fleet.unitType.standing.src, fleet.unitType.lengthM.src, fleet.allowedUnitsPerTrain.src, fleet.unitsAvailableForT14.src,
+  fleet.unitType.seats.src, fleet.unitType.standing.src, fleet.unitType.lengthM.src, fleet.allowedUnitsPerTrain.src, fleet.unitsAvailable.src,
   demand.src, demand.profile.src, demand.directionalBias.src, otherLine.src,
   ...ds.plans.map((p) => p.src),
   ...Object.values(constraints).map((c) => c.src),
@@ -45,7 +45,7 @@ console.log('\n— Talep');
 const prof = demand.profile;
 check('Gün içi paylar toplamı = 1', near(prof.shares.reduce((a, b) => a + b, 0), 1));
 check('Paylar negatif değil', prof.shares.every((x) => x >= 0));
-const daily = dailyT14Boardings(line);
+const daily = dailyLineBoardings(line);
 const perStation: Record<string, number> = {};
 for (const c of demand.cells) perStation[c.stationId] = (perStation[c.stationId] ?? 0) + c.arrivals;
 check('İstasyon başına günlük talep = biniş × T14 payı',
@@ -95,7 +95,7 @@ const checkPlan = (plan: ServicePlan) => {
   const trunkOver = plan.slots.filter((p) => 60 / p.headwayMin + otherLine.trainsPerHourBySlot[p.slotIndex] > line.trunk.maxTrainsPerHour.value);
   check('  Ortak gövde kapasitesi (T13 + T14 ≤ 24 tren/saat)', trunkOver.length === 0, trunkOver.length ? `${trunkOver.length} dilim aşıyor` : '');
   const maxUnits = Math.max(...plan.slots.map((p) => unitsRequired(line, plan, p.slotIndex)));
-  check('  Filo yeterli', maxUnits <= fleet.unitsAvailableForT14.value, `en çok ${maxUnits} / ${fleet.unitsAvailableForT14.value} ünite`);
+  check('  Filo yeterli', maxUnits <= fleet.unitsAvailable.value, `en çok ${maxUnits} / ${fleet.unitsAvailable.value} ünite`);
 
   // Statik kapasite raporu: en yüklü bölümde doluluk oranı (simülasyon değil, ortalama akış)
   let worst = { lf: 0, slot: 0, dir: 'north' as Direction, link: 0 };

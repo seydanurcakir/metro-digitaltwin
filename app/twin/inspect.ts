@@ -113,8 +113,8 @@ export function stationFacts(ds: TwinDataset, view: StationView): FactRow[] {
   const st = ds.line.stations[view.order];
   const fmt = (n: number) => Math.round(n).toLocaleString('tr-TR');
   return [
-    { label: 'Kırmızı Hat günlük biniş', value: fmt(st.redLineBoardingsPerDay.value), src: st.redLineBoardingsPerDay.src },
-    { label: 'T14 payı', value: `%${Math.round(st.t14Share.value * 100)}`, src: st.t14Share.src },
+    { label: 'Kırmızı Hat günlük biniş', value: fmt(st.boardingsPerDay.value), src: st.boardingsPerDay.src },
+    { label: 'T14 payı', value: `%${Math.round(st.lineShare.value * 100)}`, src: st.lineShare.src },
     { label: 'Peron uzunluğu', value: `${st.platform.lengthM.value} m`, src: st.platform.lengthM.src },
     { label: 'Bekleme alanı', value: `${fmt(st.platform.usableAreaM2.value)} m²`, src: st.platform.usableAreaM2.src },
     { label: 'Kapı açık süresi', value: `${st.dwellSec.value} sn`, src: st.dwellSec.src },

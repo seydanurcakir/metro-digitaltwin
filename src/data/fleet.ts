@@ -11,7 +11,7 @@ export const FLEET: Fleet = {
     value: [2, 3],
     src: { kind: 'published', ref: 'wiki-c20', note: 'Trenler 2 (kısa) veya 3 (uzun) üniteden oluşur.' },
   },
-  unitsAvailableForT14: {
+  unitsAvailable: {
     value: 54,
     src: { kind: 'assumption', ref: 'assumption', note: '18 uzun tren. İşletmecinin T14 filo tahsisiyle değiştirilmeli.' },
   },

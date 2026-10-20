@@ -6,6 +6,7 @@ import { HEAT_STEPS } from '../scene/Crowd';
 import { C } from '../scene/palette';
 import { Inspector } from './Inspector';
 import { Compare, KpiStrip } from './Metrics';
+import { NetworkPanel } from './NetworkPanel';
 
 const fmtInt = (n: number) => Math.round(n).toLocaleString('tr-TR');
 const fmtDec = (n: number) => n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -24,9 +25,10 @@ function Dock() {
       <div className="tabs" role="tablist" aria-label="Paneller">
         <button type="button" role="tab" id="tab-inspect" aria-selected={panel === 'inspect'} aria-controls="pane-body" onClick={() => setPanel('inspect')}>İnceleme</button>
         <button type="button" role="tab" id="tab-compare" aria-selected={panel === 'compare'} aria-controls="pane-body" onClick={() => setPanel('compare')}>Karşılaştırma</button>
+        <button type="button" role="tab" id="tab-network" aria-selected={panel === 'network'} aria-controls="pane-body" onClick={() => setPanel('network')}>Ağ · Solna</button>
       </div>
-      <div className="dock-body" id="pane-body" role="tabpanel" aria-labelledby={panel === 'inspect' ? 'tab-inspect' : 'tab-compare'}>
-        {panel === 'inspect' ? <Inspector /> : <Compare />}
+      <div className="dock-body" id="pane-body" role="tabpanel" aria-labelledby={`tab-${panel}`}>
+        {panel === 'inspect' ? <Inspector /> : panel === 'compare' ? <Compare /> : <NetworkPanel />}
       </div>
     </section>
   );

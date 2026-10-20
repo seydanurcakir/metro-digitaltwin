@@ -15,6 +15,7 @@
   --shadow: 0 1px 2px rgba(16, 26, 38, 0.06), 0 10px 26px rgba(16, 26, 38, 0.10);
   --chip-info-bg: #E3EBFD; --chip-info-fg: #1D45B0;
   --series-a: #7C8A99; --series-b: #2556D9;
+  --commuter: #C2477A;
   --chip-ok-bg: #DDF3EE; --chip-ok-fg: #0F6250;
   --chip-warn-bg: #FDE7D8; --chip-warn-fg: #8A3A0B;
   --font-ui: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
@@ -25,7 +26,7 @@
     --bg: #121920; --panel: #1B232C; --panel-2: #242E39; --fg: #E7ECF1; --muted: #9DAAB7; --border: #2C3743;
     --accent: #7AA2FF; --accent-fg: #0E1520; --line: #E5574D; --warn: #FF8A80; --clock-bg: #0B1015; --clock-fg: #F5C04A;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 26px rgba(0, 0, 0, 0.35);
-    --series-a: #8E9BA8; --series-b: #7AA2FF; --chip-info-bg: #22345C; --chip-info-fg: #B9CCFF; --chip-ok-bg: #173A33; --chip-ok-fg: #8FE0C8; --chip-warn-bg: #4A2A17; --chip-warn-fg: #FFC9A3;
+    --series-a: #8E9BA8; --series-b: #7AA2FF; --commuter: #EE7FA9; --chip-info-bg: #22345C; --chip-info-fg: #B9CCFF; --chip-ok-bg: #173A33; --chip-ok-fg: #8FE0C8; --chip-warn-bg: #4A2A17; --chip-warn-fg: #FFC9A3;
     color-scheme: dark;
   }
 }
@@ -33,7 +34,7 @@
   --bg: #121920; --panel: #1B232C; --panel-2: #242E39; --fg: #E7ECF1; --muted: #9DAAB7; --border: #2C3743;
   --accent: #7AA2FF; --accent-fg: #0E1520; --line: #E5574D; --warn: #FF8A80; --clock-bg: #0B1015; --clock-fg: #F5C04A;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 26px rgba(0, 0, 0, 0.35);
-  --series-a: #8E9BA8; --series-b: #7AA2FF; --chip-info-bg: #22345C; --chip-info-fg: #B9CCFF; --chip-ok-bg: #173A33; --chip-ok-fg: #8FE0C8; --chip-warn-bg: #4A2A17; --chip-warn-fg: #FFC9A3;
+  --series-a: #8E9BA8; --series-b: #7AA2FF; --commuter: #EE7FA9; --chip-info-bg: #22345C; --chip-info-fg: #B9CCFF; --chip-ok-bg: #173A33; --chip-ok-fg: #8FE0C8; --chip-warn-bg: #4A2A17; --chip-warn-fg: #FFC9A3;
   color-scheme: dark;
 }
 
@@ -163,6 +164,13 @@ h2 { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.2; }
 .kind.derived { background: var(--chip-info-bg); color: var(--chip-info-fg); }
 .kind.assumption { background: var(--chip-warn-bg); color: var(--chip-warn-fg); }
 .kind.synthetic { background: var(--panel-2); color: var(--muted); }
+
+/* Ağ sekmesi */
+.insp-icon.commuter { color: var(--commuter); }
+.net-legs { margin: -4px 0 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); }
+.net-legs b { color: var(--fg); font-family: var(--font-num); font-size: 15px; font-weight: 600; }
+.train-row.static { cursor: default; }
+.train-row.static:hover { border-color: var(--border); }
 
 /* Ölçüt şeridi */
 .kpis { flex: 1 1 auto; min-width: 0; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }

@@ -26,6 +26,36 @@ export const SOURCES: SourceRef[] = [
     note: '3 vagonlu ünite, 46,5 m, 126 oturma + 288 ayakta = 414 kişi. Trenler 2 veya 3 üniteden oluşur.',
   },
   {
+    id: 'wiki-solna',
+    title: 'Wikipedia – Solna station',
+    url: 'https://en.wikipedia.org/wiki/Solna_station',
+    note: 'Pendeltåg J40, J41, 42X; ada peron; Tvärbanan L30 bağlantısı; 2019’da iş günü 20 900 biniş.',
+  },
+  {
+    id: 'wiki-citybanan',
+    title: 'Wikipedia – Stockholm City Line (Citybanan)',
+    url: 'https://en.wikipedia.org/wiki/Stockholm_City_Line',
+    note: '7,4 km; yön başına saatte 24 tren, bunun 16’sı pendeltåg; ATC-2; Stockholm City istasyonu T-Centralen’in altında.',
+  },
+  {
+    id: 'wiki-pendeltag',
+    title: 'Wikipedia – Stockholm commuter rail',
+    url: 'https://en.wikipedia.org/wiki/Stockholm_commuter_rail',
+    note: 'Hat 41 gündüz 15 dk, hat 40 genelde 30 dk; zirvede ek seferlerle ortalama 7,5 dk; merkez bölümde 3–4 dk; yalnızca X60 kullanılır.',
+  },
+  {
+    id: 'wiki-x60',
+    title: 'Wikipedia – SL X60',
+    url: 'https://en.wikipedia.org/wiki/SL_X60',
+    note: '6 vagonlu ünite 107,1 m; 374 oturma, 530 ayakta (sayfa bu değerlerin ünite mi vagon mu başına olduğunu çelişkili veriyor; ünite başı kabul edildi); iki ünite 214 m.',
+  },
+  {
+    id: 'solna-stad',
+    title: 'Solna stad – How to get to Solna via public transport',
+    url: 'https://www.solna.se/om-solna-stad/kontakt-och-kommunikation/sa-tar-du-dig-till-solna/how-to-get-to-solna-via-public-transport',
+    note: 'Stockholm City’den (T-Centralen’in yanında) Solna station’a pendeltåg ile 7 dakika; hatlar 40, 41, 42.',
+  },
+  {
     id: 'assumption',
     title: 'Model varsayımı',
     note: 'Gerçek değer bulunamadı; makul bir başlangıç değeri. İşletmeci verisiyle değiştirilmeli.',

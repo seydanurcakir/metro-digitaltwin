@@ -21,9 +21,11 @@ export interface Sourced<T> {
   src: Provenance;
 }
 
-export type LineId = 'T13' | 'T14';
+/** Metro (T) ve pendeltåg (J) hatları */
+export type LineId = 'T13' | 'T14' | 'J40' | 'J41' | 'J42X' | 'J43' | 'J43X' | 'J44';
+export type LineMode = 'metro' | 'commuter';
 
-/** north: Mörby centrum yönü, south: Fruängen yönü */
+/** Hat dizisinde artan sıra = north. T14: Mörby centrum yönü; pendeltåg koridoru: Solna/Ulriksdal yönü */
 export type Direction = 'north' | 'south';
 export const DIRECTIONS: Direction[] = ['north', 'south'];
 
@@ -38,16 +40,18 @@ export interface Platform {
 export interface Station {
   id: string;
   name: string;
-  /** Fruängen = 0 ... Mörby centrum = 18 */
+  /** Hat üzerindeki sıra (0'dan başlar) */
   order: number;
   isTerminal: boolean;
   servedBy: LineId[];
-  /** Liljeholmen–Östermalmstorg arası T13 ile ortak gövde */
+  /** Başka hatlarla paylaşılan ortak gövdede mi (T14: T13 ile; koridor: Citybanan) */
   onTrunk: boolean;
-  /** Kırmızı Hat'ta kış iş günü ortalama günlük biniş */
-  redLineBoardingsPerDay: Sourced<number>;
-  /** Bu binişlerin T14 trenlerine düşen payı */
-  t14Share: Sourced<number>;
+  /** İstasyonun bu ulaşım türündeki kış iş günü ortalama günlük binişi */
+  boardingsPerDay: Sourced<number>;
+  /** Bu binişlerin modellenen hattın trenlerine düşen payı */
+  lineShare: Sourced<number>;
+  /** Koridor sınırını temsil eden sanal düğüm: koridor dışından gelen/giden yolcu. Ölçütlerden çıkarılır. */
+  isBoundary?: boolean;
   /** Peronda bekleme süresi (kapılar açık) */
   dwellSec: Sourced<number>;
   platform: Platform;
@@ -62,6 +66,9 @@ export interface Segment {
 
 export interface Line {
   id: LineId;
+  /** Koridorda birden çok hat aynı rayı kullanır (ör. J40, J41, J42X) */
+  lineIds?: LineId[];
+  mode?: LineMode;
   name: string;
   color: string;
   stations: Station[];
@@ -71,7 +78,7 @@ export interface Line {
   trunk: {
     fromStationId: string;
     toStationId: string;
-    /** Ortak gövdede saatte en fazla tren (T13 + T14) */
+    /** Ortak gövdede saatte en fazla tren (tüm hatlar toplamı) */
     maxTrainsPerHour: Sourced<number>;
   };
 }
@@ -87,8 +94,8 @@ export interface Fleet {
   unitType: TrainUnitType;
   /** Bir trende izin verilen ünite sayıları (kısa / uzun tren) */
   allowedUnitsPerTrain: Sourced<number[]>;
-  /** T14'e ayrılabilen toplam ünite sayısı */
-  unitsAvailableForT14: Sourced<number>;
+  /** Bu hatta ayrılabilen toplam ünite sayısı */
+  unitsAvailable: Sourced<number>;
 }
 
 /** 15 dakikalık zaman dilimi */

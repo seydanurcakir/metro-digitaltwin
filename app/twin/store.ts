@@ -39,7 +39,7 @@ interface TwinState {
   compareWindow: WindowId;
   compareScope: Scope;
   /** Sağ paneldeki sekme */
-  panel: 'inspect' | 'compare';
+  panel: 'inspect' | 'compare' | 'network';
   tick: (dtReal: number) => void;
   setPlaying: (p: boolean) => void;
   setSpeed: (s: Speed) => void;
@@ -48,7 +48,7 @@ interface TwinState {
   select: (s: Selection) => void;
   setHover: (h: boolean) => void;
   setCompare: (p: { window?: WindowId; scope?: Scope }) => void;
-  setPanel: (p: 'inspect' | 'compare') => void;
+  setPanel: (p: 'inspect' | 'compare' | 'network') => void;
 }
 
 const END = SERVICE_END_MIN * 60;

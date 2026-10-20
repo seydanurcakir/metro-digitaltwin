@@ -60,8 +60,8 @@ const stations: Station[] = ROWS.map(([id, name, boardings, major], order) => {
     isTerminal: order === 0 || order === ROWS.length - 1,
     servedBy: onTrunk ? ['T13', 'T14'] : ['T14'],
     onTrunk,
-    redLineBoardingsPerDay: boardings,
-    t14Share: onTrunk
+    boardingsPerDay: boardings,
+    lineShare: onTrunk
       ? assume(0.5, 'Ortak gövdede T13 ve T14 eşit sıklıkta; binişlerin yarısı T14 trenlerine.')
       : { value: 1, src: { kind: 'derived', ref: 'wiki-red-line', note: 'İstasyona yalnız T14 uğruyor.' } },
     dwellSec: assume(major ? 45 : 30, major ? 'Büyük aktarma istasyonu, uzun kapı açık süresi.' : 'Standart kapı açık süresi.'),
