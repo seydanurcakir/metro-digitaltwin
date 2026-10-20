@@ -20,6 +20,7 @@ import { Walkway } from './Walkway';
 import { Context } from './Context';
 import { BaseMap } from './BaseMap';
 import { OsmBuildings } from './OsmBuildings';
+import { Mall } from './Mall';
 import { HoverGuard } from './interaction';
 import { CAM, LOD } from './cam';
 
@@ -230,6 +231,7 @@ export function Scene() {
       <BaseMap />
       <Context />
       <OsmBuildings />
+      <Mall />
       <NetworkLines />
       <Walkway />
       <Arena />

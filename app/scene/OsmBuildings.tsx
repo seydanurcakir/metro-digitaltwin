@@ -13,7 +13,7 @@ import type { Pt } from '../map/clearance';
 import { CAM } from './cam';
 
 const GROUND_Y = -0.6;
-const TINT_MARKS = LANDMARKS.filter((l) => l.building || l.id === 'mall').map((l) => ({ pos: l.pos, kind: l.kind }));
+const TINT_MARKS = LANDMARKS.filter((l) => l.building).map((l) => ({ pos: l.pos, kind: l.kind }));
 
 export function OsmBuildings() {
   const status = useTwin((s) => s.basemap);

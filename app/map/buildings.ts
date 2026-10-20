@@ -5,6 +5,7 @@
 import type { XZ } from '../../src/index';
 import { localToTile, tileOrigin, tileSizeM } from '../../src/index';
 import { ARENA, WALKWAY } from '../twin/world';
+import { MALL_RING } from '../twin/mall';
 import { pointInPoly, polygonPolylineDistance, railClash, type Pt } from './clearance';
 
 export const BUILDING_Z = 14;
@@ -47,7 +48,7 @@ export interface Prism {
   tint: string | null;
 }
 
-export type DropReason = 'tiny' | 'zone' | 'rail' | 'station' | 'arena' | 'walkway' | 'hidden';
+export type DropReason = 'tiny' | 'zone' | 'rail' | 'station' | 'arena' | 'mall' | 'walkway' | 'hidden';
 
 const signedArea = (r: Pt[]) => {
   let a = 0;
@@ -105,7 +106,7 @@ const inArena = (p: Pt, pad: number) => {
  * `extent` is the tile's coordinate range (4096 for OpenMapTiles).
  */
 export function tileBuildings(feats: BuildingInput[], x: number, y: number, extent: number): { kept: Prism[]; dropped: Record<DropReason, number> } {
-  const dropped: Record<DropReason, number> = { tiny: 0, zone: 0, rail: 0, station: 0, arena: 0, walkway: 0, hidden: 0 };
+  const dropped: Record<DropReason, number> = { tiny: 0, zone: 0, rail: 0, station: 0, arena: 0, mall: 0, walkway: 0, hidden: 0 };
   const kept: Prism[] = [];
   const o = tileOrigin(BUILDING_Z, x, y), s = tileSizeM(BUILDING_Z);
   const toWorld = (r: Pt[]): Pt[] => r.map(([px, py]) => [o.x + (px / extent) * s, o.z + (py / extent) * s]);
@@ -128,6 +129,8 @@ export function tileBuildings(feats: BuildingInput[], x: number, y: number, exte
       const rail = railClash(outer);
       if (rail) { dropped[rail]++; continue; }
       if (inArena([centroid.x, centroid.z], 15) || outer.some((p) => inArena(p, 8)) || pointInPoly(ARENA.pos.x, ARENA.pos.z, outer)) { dropped.arena++; continue; }
+      // Mall of Scandinavia has its own landmark model (Mall.tsx): its OSM blocks are replaced
+      if (pointInPoly(centroid.x, centroid.z, MALL_RING) || outer.filter((p) => pointInPoly(p[0], p[1], MALL_RING)).length > outer.length / 2) { dropped.mall++; continue; }
       if (polygonPolylineDistance(outer, WALKWAY) < 5) { dropped.walkway++; continue; }
       const k = zoneTaper(r);
       const h = Math.max(3, Math.min(150, (Number.isFinite(hRaw) ? hRaw : 10) * k));

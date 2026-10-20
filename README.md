@@ -11,6 +11,15 @@ npm run dev     # open the 3D map in the browser
 npm run build   # single-file page in dist/
 ```
 
+## Step 12: Mall of Scandinavia landmark (preview)
+
+Westfield Mall of Scandinavia is now a landmark model of its own (`app/scene/Mall.tsx`, geometry in `app/twin/mall.ts`), like Strawberry Arena, instead of generic extruded blocks. The OpenStreetMap blocks inside its footprint are dropped.
+
+- A lit shop-front podium (7 m) under a clad upper volume (22 m), on the traced footprint simplified to 33 clean facades.
+- Neon geometry: cyan bands above the shop fronts and along the roofline, magenta chevrons on every long facade.
+- A digital billboard (48 × 12 m) on the facade facing Solna station. It cycles fixed messages over a moving gradient; there is no live data.
+- An illuminated 'M' (own geometric design, not the mall's trademark logo) about 70 m wide on the roof, with a soft pulsing glow.
+
 ## Step 11: Seamless street map, rail clearance and developer badge
 
 - **Street map everywhere.** The map is now a continuous dark street map covering the whole screen at every zoom level. It is drawn from OpenStreetMap vector tiles served by [OpenFreeMap](https://openfreemap.org) (free, no API key, no usage limits, OpenMapTiles schema). The tiles are rendered in the twin's own dark style (`app/map/style.ts`): water, parks and woodland, land use, roads by importance and rail. There is no text in the tiles, because the twin's labels sit on top. The tile level follows the zoom, and a coarser level stays underneath, so panning and zooming never show gaps or edges. The rectangular traced patch from Step 10 is gone.

@@ -13,6 +13,7 @@ import { buildingGeometry } from '../app/map/mesh';
 import { drawTile, prepare } from '../app/map/style';
 import { tileZoomFor } from '../app/scene/BaseMap';
 import { encodeTile, type EncFeature } from './lib/mvt';
+import { BILLBOARD, MALL_EDGES, MALL_H, MALL_RING, ROOF_CENTRE, letterM, neonSegments, pointInRing, signedArea } from '../app/twin/mall';
 
 let failed = 0;
 const check = (name: string, ok: boolean, detail = '') => {
@@ -147,6 +148,29 @@ for (let t = 0; t < P.count; t += 3) {
 }
 check('Walls face outwards (also into courtyards) and roofs face up', outward);
 check('Triangles wind counter-clockwise towards their normal (front faces)', ccw, `${P.count / 3} triangles`);
+
+
+console.log('\n— Mall of Scandinavia landmark');
+const mallArea = signedArea(MALL_RING), tracedArea = Math.abs(signedArea(MALL.footprint as [number, number][]));
+check('Simplified footprint keeps the traced shape (area within 3%)', mallArea > 0 && Math.abs(mallArea - tracedArea) / tracedArea < 0.03, `${MALL_RING.length} corners, ${(mallArea / 1e3).toFixed(0)}k m²`);
+const toSol = { x: TWINS.solna.pos.x - BILLBOARD.centre.x, z: TWINS.solna.pos.z - BILLBOARD.centre.z }, ls = Math.hypot(toSol.x, toSol.z);
+const facing = (BILLBOARD.edge.out.x * toSol.x + BILLBOARD.edge.out.z * toSol.z) / ls;
+check('Billboard sits on a long facade facing Solna station', facing > 0.5 && BILLBOARD.width >= 30 && BILLBOARD.width <= BILLBOARD.edge.len,
+  `${BILLBOARD.width.toFixed(0)} × ${BILLBOARD.height} m, facing ${(Math.acos(facing) * 180 / Math.PI).toFixed(0)}° off the station`);
+check('Billboard stays between the shop fronts and the roof', BILLBOARD.y - BILLBOARD.height / 2 >= MALL_H.podium && BILLBOARD.y + BILLBOARD.height / 2 <= MALL_H.total);
+const mSize = Math.min(70, ROOF_CENTRE.clearance * 1.5);
+check("Roof 'M' fits on the roof", pointInRing(ROOF_CENTRE.p, MALL_RING) && letterM(mSize, mSize * 0.8).every(([x, y]) => pointInRing({ x: ROOF_CENTRE.p.x + x, z: ROOF_CENTRE.p.z - y }, MALL_RING)), `${mSize.toFixed(0)} m wide`);
+const neon = neonSegments();
+let neonOut = true;
+for (const arr of [neon.bands, neon.zigzag]) for (let i = 0; i < arr.length; i += 3) if (pointInRing({ x: arr[i], z: arr[i + 2] }, MALL_RING)) neonOut = false;
+check('Neon lines run just outside the walls', neonOut && neon.zigzag.length > 0, `${neon.bands.length / 6} band and ${neon.zigzag.length / 6} chevron segments on ${MALL_EDGES.length} facades`);
+{
+  const c = ROOF_CENTRE.p, t = localToTile(c, BUILDING_Z), tx = Math.floor(t.tx), ty = Math.floor(t.ty);
+  const vt = new VectorTile(new PbfReader(encodeTile({ building: [{ type: 3, geom: [ring(c, 40, tx, ty)], props: { render_height: 20 } }] })));
+  const f = vt.layers.building.feature(0);
+  const r = tileBuildings([{ rings: f.loadGeometry().map((q) => q.map((p) => [p.x, p.y] as Pt)), props: f.properties }], tx, ty, 4096);
+  check('Generic OSM blocks of the mall are replaced by the landmark model', r.kept.length === 0 && r.dropped.mall === 1);
+}
 
 console.log(`\n${failed === 0 ? 'All tests passed.' : `${failed} test(s) failed.`}`);
 process.exit(failed === 0 ? 0 : 1);
