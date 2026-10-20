@@ -204,9 +204,10 @@ h2 { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.2; }
 
 /* Developer badge (bottom-right). Solid, opaque background so nothing underneath can show through. */
 .dev-badge {
-  position: fixed; bottom: 12px; right: 12px; z-index: 99999;
+  position: fixed !important; bottom: 12px; right: 12px; z-index: 2147483647 !important; /* highest possible */
+  visibility: visible !important; opacity: 1 !important;
   display: inline-flex; align-items: center; gap: 12px; padding: 3px 6px; box-sizing: border-box;
-  background-color: #16171c; /* matches the signature image's background */ opacity: 1; border: 0; border-radius: 8px;
+  background-color: #16171c !important; /* opaque; matches the signature image's background */ border: 0; border-radius: 8px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45); text-decoration: none; isolation: isolate;
   transition: box-shadow 0.25s ease, transform 0.25s ease;
 }
