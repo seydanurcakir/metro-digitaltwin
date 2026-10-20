@@ -1,9 +1,54 @@
-// Static surroundings of Solna station: Vasalundsparken, Comfort Hotel Solna and representative street blocks.
-// Context only — nothing here takes part in the simulation. Block positions are generated (not surveyed);
-// they keep clear of the railway, the arena, the walkway, the park and the area reserved for Mall of Scandinavia.
-import { toLocal, type XZ } from '../../src/index';
+// Static surroundings of Solna station, from the reference map traced by scripts/trace-solna-map.py:
+// water (Råstasjön, Brunnsviken), parks, motorways (E4, E18, Järva krog), local roads, rail-yard tracks,
+// the Mall of Scandinavia complex, named landmarks and representative street blocks.
+// Context only — nothing here takes part in the simulation or carries live data.
+import type { XZ } from '../../src/index';
+import { toLocal } from '../../src/index';
+import MAP from './solna-map.json';
 import { ARENA, LINES, TWINS, WALKWAY } from './world';
 import { rng } from './selectors';
+
+export interface Area {
+  area: number;
+  pts: [number, number][];
+}
+
+export const SOLNA_MAP = MAP as unknown as {
+  source: string;
+  extent: [[number, number], [number, number]];
+  water: Area[];
+  green: Area[];
+  commercial: Area[];
+  mall: Area[];
+  motorway: Area[];
+  roads: [number, number][][];
+  railyard: [number, number][][];
+  free: { step: number; rows: string[]; ax: number; ay: number; s: number };
+};
+
+/** Detailed context area (world metres): north-west and south-east corners */
+export const EXTENT = { x0: SOLNA_MAP.extent[0][0], z0: SOLNA_MAP.extent[0][1], x1: SOLNA_MAP.extent[1][0], z1: SOLNA_MAP.extent[1][1] };
+
+const F = SOLNA_MAP.free;
+/** Reference-map pixel → world */
+export const fromPx = (px: number, py: number): XZ => ({ x: (px - F.ax) / F.s, z: (py - F.ay) / F.s });
+
+/** Is this world point on open, built-up ground in the reference map (not water, park, road, motorway, commercial)? */
+export function isFree(p: XZ): boolean {
+  const px = F.ax + F.s * p.x, py = F.ay + F.s * p.z;
+  const row = F.rows[Math.floor(py / F.step)];
+  if (!row) return false;
+  return row[Math.floor(px / F.step)] === '1';
+}
+
+export function inPolygon(p: XZ, pts: [number, number][]): boolean {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, zi] = pts[i], [xj, zj] = pts[j];
+    if ((zi > p.z) !== (zj > p.z) && p.x < ((xj - xi) * (p.z - zi)) / (zj - zi) + xi) inside = !inside;
+  }
+  return inside;
+}
 
 export interface Footprint {
   /** Centre (world m) */
@@ -16,49 +61,69 @@ export interface Footprint {
   rotY: number;
 }
 
+export type LandmarkKind = 'hotel' | 'venue' | 'retail' | 'park' | 'water' | 'area' | 'road' | 'poi';
+
 export interface Landmark {
   id: string;
   name: string;
-  kind: 'park' | 'hotel';
+  kind: LandmarkKind;
   pos: XZ;
-  /** Short provenance text shown in the label tooltip */
+  /** Building drawn for this landmark, if any */
+  building?: Footprint;
+  /** Provenance shown as a tooltip */
   note: string;
 }
 
-/** Street grid follows the railway through Solna (platform bearing 350°) */
 const GRID_ROT = TWINS.solna.rotY;
+const MAP_NOTE = 'Position from the reference map (approximate)';
+const b = (p: XZ, w: number, d: number, h: number, rotY = GRID_ROT): Footprint => ({ x: p.x, z: p.z, w, d, h, rotY });
+const off = (p: XZ, ux: number, uz: number, m: number): XZ => ({ x: p.x + ux * m, z: p.z + uz * m });
 
-export const PARK = {
-  centre: toLocal({ lat: 59.36831, lon: 18.00208 }),
-  /** Half axes (m); outline approximate */
-  rx: 130,
-  rz: 85,
-  rotY: GRID_ROT,
-};
-
-export const HOTEL: Footprint = (() => {
-  const p = toLocal({ lat: 59.3733, lon: 18.004 });
-  return { x: p.x, z: p.z, w: 70, d: 24, h: 42, rotY: GRID_ROT };
-})();
-
-/** Area kept free for Mall of Scandinavia (next step) */
-export const MALL_RESERVE = (() => {
-  const c = toLocal({ lat: 59.3703, lon: 18.0047 });
-  return { x: c.x, z: c.z, rx: 175, rz: 125 };
-})();
-
+/** Landmarks as placed on the reference map (pixel positions of their map markers) */
 export const LANDMARKS: Landmark[] = [
-  { id: 'vasalundsparken', name: 'Vasalundsparken', kind: 'park', pos: PARK.centre, note: 'Park position from Pacer; outline approximate' },
-  { id: 'comfort-hotel', name: 'Comfort Hotel Solna', kind: 'hotel', pos: { x: HOTEL.x, z: HOTEL.z }, note: 'Evenemangsgatan 48; position approximate' },
+  { id: 'mall', name: 'Westfield Mall of Scandinavia', kind: 'retail', pos: fromPx(318, 245), note: `${MAP_NOTE}; footprint traced` },
+  // The cinema is part of the mall's north-east wing: its block is set back from the map marker, south-west of
+  // the event walkway (Evenemangsgatan) and aligned with it, so the walkway keeps its width.
+  { id: 'filmstaden', name: 'Filmstaden Scandinavia', kind: 'venue', pos: fromPx(387, 208), building: b(off(fromPx(387, 208), -0.485, 0.874, 46), 70, 44, 32, -0.507), note: `${MAP_NOTE}; cinema block height assumed` },
+  { id: 'gstar', name: 'G-Star RAW Store', kind: 'retail', pos: fromPx(412, 256), building: b(fromPx(412, 256), 26, 18, 9), note: MAP_NOTE },
+  { id: 'pressbyran', name: 'Pressbyrån Solna Station', kind: 'poi', pos: fromPx(473, 308), note: MAP_NOTE },
+  { id: 'comfort-hotel', name: 'Comfort Hotel Solna', kind: 'hotel', pos: toLocal({ lat: 59.3733, lon: 18.004 }), building: b(toLocal({ lat: 59.3733, lon: 18.004 }), 70, 24, 42), note: 'Evenemangsgatan 48; not on the reference map view, position approximate' },
+  { id: 'winery', name: 'The Winery Hotel', kind: 'hotel', pos: fromPx(535, 13), building: b(fromPx(535, 22), 60, 34, 30), note: `${MAP_NOTE}; at the Järva krog interchange` },
+  { id: 'hagastrand', name: 'Hagastrand, Autograph Collection', kind: 'hotel', pos: fromPx(838, 283), building: b(fromPx(838, 290), 52, 30, 22, 0.35), note: MAP_NOTE },
+  { id: 'monte-carlo', name: 'Monte Carlo', kind: 'poi', pos: fromPx(768, 25), building: b(fromPx(768, 25), 20, 14, 9, 0.2), note: MAP_NOTE },
+  { id: 'tivoliberget', name: 'Tivolibergets luftvärnsställning', kind: 'poi', pos: fromPx(885, 108), note: `${MAP_NOTE}; historic anti-aircraft position` },
+  { id: 'vasalundsparken', name: 'Vasalundsparken', kind: 'park', pos: toLocal({ lat: 59.36831, lon: 18.00208 }), note: 'Park point from Pacer; outline traced from the reference map' },
+  { id: 'hagaparken', name: 'Hagaparken', kind: 'park', pos: fromPx(705, 330), note: 'Park east of the E4 along Brunnsviken (outline traced)' },
+  { id: 'rastasjon', name: 'Råstasjön', kind: 'water', pos: fromPx(140, 203), note: 'Lake outline traced from the reference map' },
+  { id: 'brunnsviken', name: 'Brunnsviken', kind: 'water', pos: fromPx(900, 200), note: 'Bay outline traced from the reference map' },
+  { id: 'frosunda', name: 'Frösunda', kind: 'area', pos: fromPx(505, 160), note: MAP_NOTE },
+  { id: 'rastahem', name: 'Råstahem', kind: 'area', pos: fromPx(172, 12), note: MAP_NOTE },
+  { id: 'rasunda', name: 'Råsunda', kind: 'area', pos: fromPx(240, 433), note: MAP_NOTE },
+  { id: 'alkistan', name: 'Ålkistan', kind: 'area', pos: fromPx(1000, 96), note: MAP_NOTE },
+  { id: 'e4', name: 'E4', kind: 'road', pos: fromPx(651, 235), note: MAP_NOTE },
+  { id: 'e18', name: 'E18', kind: 'road', pos: fromPx(300, 34), note: MAP_NOTE },
+  { id: 'jarva-krog', name: 'Trafikplats Järva krog', kind: 'road', pos: fromPx(468, 30), note: MAP_NOTE },
+  { id: 'sjovagen', name: 'Sjövägen', kind: 'road', pos: fromPx(177, 288), note: MAP_NOTE },
+  { id: 'ostervagen', name: 'Östervägen', kind: 'road', pos: fromPx(262, 363), note: MAP_NOTE },
+  { id: 'rasundavagen', name: 'Råsundavägen', kind: 'road', pos: fromPx(177, 400), note: MAP_NOTE },
+  { id: 'kolonnvagen', name: 'Kolonnvägen', kind: 'road', pos: fromPx(413, 100), note: MAP_NOTE },
 ];
+
+export const LANDMARK_BUILDINGS: (Footprint & { id: string })[] = LANDMARKS.filter((l) => l.building).map((l) => ({ id: l.id, ...l.building! }));
+
+/** Vasalundsparken: the traced park outline that contains the published park point */
+export const PARK = SOLNA_MAP.green.find((g) => inPolygon(LANDMARKS.find((l) => l.id === 'vasalundsparken')!.pos, g.pts)) ?? null;
+
+/** Mall of Scandinavia footprint and height */
+export const MALL = { footprint: SOLNA_MAP.mall[0]?.pts ?? [], height: 24 };
 
 const rot = (x: number, z: number, a: number) => ({ x: x * Math.cos(a) + z * Math.sin(a), z: -x * Math.sin(a) + z * Math.cos(a) });
 
 function distToPolyline(p: XZ, pts: { x: number; z: number }[]): number {
   let best = Infinity;
   for (let i = 1; i < pts.length; i++) {
-    const a = pts[i - 1], b = pts[i];
-    const dx = b.x - a.x, dz = b.z - a.z;
+    const a = pts[i - 1], q = pts[i];
+    const dx = q.x - a.x, dz = q.z - a.z;
     const l2 = dx * dx + dz * dz || 1;
     const u = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.z - a.z) * dz) / l2));
     best = Math.min(best, Math.hypot(p.x - (a.x + dx * u), p.z - (a.z + dz * u)));
@@ -71,55 +136,63 @@ const inEllipse = (p: XZ, c: XZ, rx: number, rz: number, a: number, pad: number)
   return (q.x / (rx + pad)) ** 2 + (q.z / (rz + pad)) ** 2 <= 1;
 };
 
-/** Clearances (m) used to keep blocks off important features; exported for the tests */
-export const CLEAR = { rail: 55, arena: 45, walkway: 30, park: 20, mall: 25, hotel: 35 };
+/** Clearances (m) that keep generated blocks off the twin's own features; exported for the tests */
+export const CLEAR = { rail: 55, arena: 45, walkway: 30, landmark: 30 };
 
-export function blockClashes(b: Footprint): string | null {
-  // Test the centre and the four corners
-  const hw = b.w / 2, hd = b.d / 2;
+const railPts = (() => {
+  const al = LINES.PENDEL.al;
+  return Array.from({ length: al.xs.length }, (_, i) => ({ x: al.xs[i], z: al.zs[i] }));
+})();
+
+/** Why a block cannot stand here (or null): checks the twin's railway, arena, walkway, landmark buildings and the map */
+export function blockClashes(f: Footprint): string | null {
+  const hw = f.w / 2, hd = f.d / 2;
   const pts = [{ x: 0, z: 0 }, { x: hw, z: hd }, { x: -hw, z: hd }, { x: hw, z: -hd }, { x: -hw, z: -hd }].map((o) => {
-    const r = rot(o.x, o.z, b.rotY);
-    return { x: b.x + r.x, z: b.z + r.z };
+    const r = rot(o.x, o.z, f.rotY);
+    return { x: f.x + r.x, z: f.z + r.z };
   });
-  const rail = LINES.PENDEL.al;
-  const railPts = Array.from({ length: rail.xs.length }, (_, i) => ({ x: rail.xs[i], z: rail.zs[i] }));
   for (const p of pts) {
     if (distToPolyline(p, railPts) < CLEAR.rail) return 'rail';
     if (inEllipse(p, ARENA.pos, ARENA.a, ARENA.b, ARENA.rotY, CLEAR.arena)) return 'arena';
     if (distToPolyline(p, WALKWAY) < CLEAR.walkway) return 'walkway';
-    if (inEllipse(p, PARK.centre, PARK.rx, PARK.rz, PARK.rotY, CLEAR.park)) return 'park';
-    if (Math.abs(p.x - MALL_RESERVE.x) < MALL_RESERVE.rx + CLEAR.mall && Math.abs(p.z - MALL_RESERVE.z) < MALL_RESERVE.rz + CLEAR.mall) return 'mall';
-    if (Math.hypot(p.x - HOTEL.x, p.z - HOTEL.z) < HOTEL.w / 2 + CLEAR.hotel) return 'hotel';
+    if (MALL.footprint.length && inPolygon(p, MALL.footprint)) return 'mall';
+    for (const l of LANDMARK_BUILDINGS) if (Math.hypot(p.x - l.x, p.z - l.z) < Math.max(l.w, l.d) / 2 + CLEAR.landmark) return 'landmark';
+    if (!isFree(p)) return 'map';
   }
   return null;
 }
 
-/** Representative street blocks within ~1 km of Solna station and the arena */
+/** Representative street blocks on the open built-up ground of the reference map (generated, not surveyed) */
 export const BLOCKS: Footprint[] = (() => {
   const r = rng(20261020);
-  const centre = { x: (ARENA.pos.x + TWINS.solna.pos.x) / 2, z: (ARENA.pos.z + TWINS.solna.pos.z) / 2 };
   const out: Footprint[] = [];
-  const cell = 92;
-  for (let i = -12; i <= 12; i++) for (let j = -12; j <= 12; j++) {
+  const cell = 56;
+  const cx = (EXTENT.x0 + EXTENT.x1) / 2, cz = (EXTENT.z0 + EXTENT.z1) / 2;
+  const n = Math.ceil(Math.max(EXTENT.x1 - EXTENT.x0, EXTENT.z1 - EXTENT.z0) / cell / 2) + 2;
+  for (let i = -n; i <= n; i++) for (let j = -n; j <= n; j++) {
     const g = rot(i * cell, j * cell, GRID_ROT);
-    const x = centre.x + g.x, z = centre.z + g.z;
-    if (Math.hypot(x - centre.x, z - centre.z) > 1050) continue;
-    if (r() < 0.18) continue; // squares, plazas, gaps
-    const b: Footprint = { x, z, w: 46 + r() * 30, d: 40 + r() * 28, h: 9 + r() * r() * 34, rotY: GRID_ROT };
-    if (!blockClashes(b)) out.push(b);
+    const x = cx + g.x + (r() - 0.5) * 10, z = cz + g.z + (r() - 0.5) * 10;
+    if (x < EXTENT.x0 || x > EXTENT.x1 || z < EXTENT.z0 || z > EXTENT.z1) continue;
+    if (r() < 0.12) continue; // courtyards and small squares
+    // Taller office blocks in Frösunda/Arenastaden near the station, lower housing further out
+    const near = Math.hypot(x - TWINS.solna.pos.x, z - TWINS.solna.pos.z) < 700;
+    const h = near ? 14 + r() * 30 : 9 + r() * r() * 22;
+    const f: Footprint = { x, z, w: 26 + r() * 18, d: 22 + r() * 16, h, rotY: GRID_ROT };
+    if (!blockClashes(f)) out.push(f);
   }
   return out;
 })();
 
-/** Trees scattered in the park */
+/** Trees in Vasalundsparken */
 export const TREES: XZ[] = (() => {
+  if (!PARK) return [];
   const r = rng(7);
+  const xs = PARK.pts.map((p) => p[0]), zs = PARK.pts.map((p) => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
   const out: XZ[] = [];
-  while (out.length < 46) {
-    const q = { x: (r() * 2 - 1) * PARK.rx, z: (r() * 2 - 1) * PARK.rz };
-    if ((q.x / PARK.rx) ** 2 + (q.z / PARK.rz) ** 2 > 0.85) continue;
-    const w = rot(q.x, q.z, PARK.rotY);
-    out.push({ x: PARK.centre.x + w.x, z: PARK.centre.z + w.z });
+  for (let k = 0; k < 4000 && out.length < 70; k++) {
+    const p = { x: x0 + r() * (x1 - x0), z: z0 + r() * (z1 - z0) };
+    if (inPolygon(p, PARK.pts) && distToPolyline(p, WALKWAY) > 15) out.push(p);
   }
   return out;
 })();

@@ -226,9 +226,21 @@ h2 { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.2; }
 .map-label.arena .badge { background: #B7791F; }
 .map-label.context { cursor: default; transform: translate(-50%, -50%); pointer-events: none; }
 .map-label.context .name { font-weight: 500; font-size: 11px; color: #AFC0CF; background: rgba(13, 19, 26, 0.55); border-color: transparent; }
+.map-label.context { gap: 4px; }
 .map-label.context.park .name { color: #8FD3A8; }
+.map-label.context.water .name { color: #7FB8DE; font-style: italic; background: transparent; }
+.map-label.context.area .name { color: #7D8C9A; text-transform: uppercase; letter-spacing: 0.12em; font-size: 10px; background: transparent; }
+.map-label.context.road .name { color: #8A9AAD; font-size: 10px; background: rgba(13, 19, 26, 0.7); border-radius: 3px; }
+.map-label.context.hotel .name { color: #C7D3E0; }
+.map-label.context.key .name { color: #E9D9B4; font-weight: 600; font-size: 12px; border-color: rgba(233, 217, 180, 0.35); }
+.ctx-icon { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 4px; font-size: 9px; font-weight: 700; line-height: 1; color: #0D131A; background: #8EA3B8; flex: none; }
+.map-label.context.hotel .ctx-icon { background: #9DBBFF; }
+.map-label.context.venue .ctx-icon { background: #D49BF2; }
+.map-label.context.retail .ctx-icon { background: #E9C982; }
+.map-label.context.poi .ctx-icon { background: transparent; color: #8EA3B8; font-size: 14px; }
+.stage[data-lod="mid"] .map-label.context.road, .stage[data-lod="mid"] .map-label.context.poi { display: none; }
 .stage[data-lod="far"] .map-label.minor .name { display: none; }
-.stage[data-lod="far"] .map-label.context, .stage[data-lod="wide"] .map-label.context { display: none; }
+.stage[data-lod="far"] .map-label.context, .stage[data-lod="wide"] .map-label.context:not(.key):not(.water) { display: none; }
 .stage[data-lod="close"] .map-label.twin { display: none; }
 
 /* KPI strip */

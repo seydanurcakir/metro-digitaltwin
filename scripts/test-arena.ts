@@ -7,7 +7,7 @@ import { arenaStateAt, arenaSurges, buildArenaFlow, egressShares } from '../src/
 import { getCorridor } from '../app/twin/network';
 import { eventMetrics } from '../app/twin/arena';
 import { ARENA, TWINS, WALKWAY, WALKWAY_LENGTH_M } from '../app/twin/world';
-import { BLOCKS, HOTEL, LANDMARKS, blockClashes } from '../app/twin/context';
+import { BLOCKS, EXTENT, LANDMARKS, MALL, PARK, SOLNA_MAP, TREES, blockClashes, inPolygon } from '../app/twin/context';
 
 let failed = 0;
 const check = (name: string, ok: boolean, detail = '') => {
@@ -26,14 +26,41 @@ check('Walkway joins the arena to the Solna footbridge', Math.hypot(WALKWAY[0].x
   && Math.hypot(WALKWAY[WALKWAY.length - 1].x - TWINS.solna.pos.x, WALKWAY[WALKWAY.length - 1].z - TWINS.solna.pos.z) < 150);
 check('Drawn walkway length is close to the published walk (±15%)', rel(WALKWAY_LENGTH_M, A.walkway.lengthM.value) < 0.15, `${WALKWAY_LENGTH_M.toFixed(0)} m vs ${A.walkway.lengthM.value} m`);
 
-console.log('\n— Context layer');
+console.log('\n— Context layer (static, traced from the reference map)');
+const area = (pts: [number, number][]) => Math.abs(pts.reduce((a, p, i) => { const q = pts[(i + 1) % pts.length]; return a + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
+const inAny = (p: { x: number; z: number }, layer: { pts: [number, number][] }[]) => layer.some((a) => inPolygon(p, a.pts));
 check('Representative blocks generated', BLOCKS.length > 150, `${BLOCKS.length} blocks`);
-check('No block on the railway, arena, walkway, park, mall area or hotel', BLOCKS.every((b) => blockClashes(b) === null));
-const hotelReason = blockClashes({ ...HOTEL });
-check('Hotel clear of railway, arena and walkway', hotelReason === 'hotel', `nearest feature: ${hotelReason}`);
-check('Landmarks are near Solna (within 1.2 km)', LANDMARKS.every((l) => Math.hypot(l.pos.x - TWINS.solna.pos.x, l.pos.z - TWINS.solna.pos.z) < 1200));
+check('No block on the railway, arena, walkway, mall, landmarks, water, parks or roads', BLOCKS.every((b) => blockClashes(b) === null));
+check('Every landmark lies inside the mapped area', LANDMARKS.every((l) => l.pos.x >= EXTENT.x0 && l.pos.x <= EXTENT.x1 && l.pos.z >= EXTENT.z0 && l.pos.z <= EXTENT.z1));
+const ids = new Set(LANDMARKS.map((l) => l.id));
+check('Key landmarks placed', ['mall', 'filmstaden', 'winery', 'comfort-hotel', 'hagastrand', 'rastasjon', 'brunnsviken', 'e4', 'e18'].every((id) => ids.has(id)));
+const mallA = area(MALL.footprint);
+check('Mall of Scandinavia footprint traced (plausible size)', mallA > 60_000 && mallA < 130_000, `${(mallA / 1e3).toFixed(0)}k m²`);
+const mallL = LANDMARKS.find((l) => l.id === 'mall')!;
+check('Mall marker sits on the mall footprint', inPolygon(mallL.pos, MALL.footprint));
+check('Mall lies between the arena and Solna station (south-east of the arena)', mallL.pos.z > ARENA.pos.z - 50 && mallL.pos.x < TWINS.solna.pos.x);
+const lake = toLocal({ lat: 59.37222, lon: 17.98889 });
+check('Råstasjön traced at its published position', inAny(lake, SOLNA_MAP.water));
+check('Brunnsviken traced east of the E4', inAny(LANDMARKS.find((l) => l.id === 'brunnsviken')!.pos, SOLNA_MAP.water));
+check('Arena and walkway are not in water', !inAny(ARENA.pos, SOLNA_MAP.water) && WALKWAY.every((p) => !inAny(p, SOLNA_MAP.water)));
+check('Motorway and road layers traced', SOLNA_MAP.motorway.length >= 3 && SOLNA_MAP.roads.length > 100, `${SOLNA_MAP.motorway.length} motorway areas, ${SOLNA_MAP.roads.length} road lines`);
 const park = LANDMARKS.find((l) => l.id === 'vasalundsparken')!, parkGeo = toLocal({ lat: 59.36831, lon: 18.00208 });
-check('Vasalundsparken at its published point', Math.hypot(park.pos.x - parkGeo.x, park.pos.z - parkGeo.z) < 1e-6);
+check('Vasalundsparken at its published point, with a traced outline', Math.hypot(park.pos.x - parkGeo.x, park.pos.z - parkGeo.z) < 1e-6 && PARK !== null, PARK ? `${(area(PARK.pts) / 1e3).toFixed(0)}k m²` : 'no outline');
+check('Park trees stay inside the park', PARK !== null && TREES.length > 20 && TREES.every((t) => inPolygon(t, PARK!.pts)), `${TREES.length} trees`);
+const walkPts: { x: number; z: number }[] = [];
+for (let i = 1; i < WALKWAY.length; i++) {
+  const a = WALKWAY[i - 1], c = WALKWAY[i], n = Math.ceil(Math.hypot(c.x - a.x, c.z - a.z) / 4);
+  for (let k = 0; k <= n; k++) walkPts.push({ x: a.x + ((c.x - a.x) * k) / n, z: a.z + ((c.z - a.z) * k) / n });
+}
+const inBox = (p: { x: number; z: number }, f: { x: number; z: number; w: number; d: number; rotY: number }, m: number) => {
+  const dx = p.x - f.x, dz = p.z - f.z, c = Math.cos(f.rotY), s = Math.sin(f.rotY);
+  return Math.abs(dx * c - dz * s) < f.w / 2 + m && Math.abs(dx * s + dz * c) < f.d / 2 + m;
+};
+check('Walkway stays clear of the mall and every landmark building (4 m margin)', walkPts.every((p) => !inPolygon(p, MALL.footprint) && LANDMARKS.every((l) => !l.building || !inBox(p, l.building, 4))));
+for (const l of LANDMARKS.filter((x) => x.building)) {
+  const why = blockClashes(l.building!);
+  console.log(`  · ${l.name}: nearest feature ${why ?? 'none'}`);
+}
 
 console.log('\n— Crowd flow');
 const sh = egressShares(A.egressP90Min.value);

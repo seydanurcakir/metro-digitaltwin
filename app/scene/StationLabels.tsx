@@ -7,6 +7,9 @@ import { ARENA, MAP_STATIONS, type MapStation } from '../twin/world';
 import { LANDMARKS } from '../twin/context';
 import { CAM } from './cam';
 
+/** Small glyphs for named places (purely visual; context labels are not interactive) */
+const ICON: Partial<Record<string, string>> = { hotel: 'H', venue: '◆', retail: '■', poi: '•' };
+
 function Label({ s }: { s: MapStation }) {
   const onClick = () => {
     const st = useTwin.getState();
@@ -63,7 +66,8 @@ export function StationLabels() {
       <ArenaLabel />
       {LANDMARKS.map((l) => (
         <Html key={l.id} position={[l.pos.x, 0, l.pos.z]} zIndexRange={[19, 0]}>
-          <span className={`map-label context ${l.kind}`} title={l.note}>
+          <span className={`map-label context ${l.kind}${l.id === 'mall' ? ' key' : ''}`}>
+            {ICON[l.kind] && <span className="ctx-icon" aria-hidden="true">{ICON[l.kind]}</span>}
             <span className="name">{l.name}</span>
           </span>
         </Html>
