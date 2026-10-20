@@ -53,7 +53,7 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); fon
   display: flex; align-items: flex-start; gap: 12px; pointer-events: none;
 }
 .top-left > .card { position: relative; }
-.brand { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; }
+.brand { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; max-width: 372px; }
 .brand-row { display: flex; align-items: center; gap: 12px; }
 .right-col {
   position: absolute; top: 16px; bottom: 16px; right: max(16px, env(safe-area-inset-right, 0px)); width: 360px;
@@ -80,6 +80,7 @@ p.muted { margin: 2px 0 0; font-size: 13px; }
 .mini-badge { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; color: #FFFFFF; font-family: var(--font-num); font-size: 11.5px; font-weight: 600; }
 .mini-badge.metro { background: var(--line); }
 .mini-badge.commuter { background: var(--commuter); }
+.mini-badge.arena { background: #B7791F; }
 .label { font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .num { font-variant-numeric: tabular-nums; }
 
@@ -192,6 +193,15 @@ h2 { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.2; }
 .btn.small.primary { min-width: 0; }
 .insp-icon.commuter { color: var(--commuter); }
 
+/* Arena panel */
+.event-card { background: var(--panel-2); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+.event-card > div { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.event-card p { margin: 0; font-size: 12.5px; }
+.schedule { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.schedule li { display: grid; grid-template-columns: 96px 1fr; gap: 0 8px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; }
+.schedule li .muted { grid-column: 2; font-size: 12px; }
+.schedule li.on { color: var(--accent); font-weight: 600; }
+
 /* Map labels */
 .map-label {
   /* Labels sit on the dark map in both themes, so they use fixed dark-map colours */
@@ -212,7 +222,13 @@ h2 { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.2; }
 .map-label.boundary .dot { border-style: dotted; }
 .map-label:hover .name, .map-label:focus-visible .name { color: #9DBBFF; border-color: rgba(157, 187, 255, 0.5); }
 .map-label:focus-visible { outline: 2px solid #9DBBFF; outline-offset: 2px; border-radius: 6px; }
+.map-label.arena .dot { border-color: #F2B441; box-shadow: 0 0 0 1.5px var(--map-bg), 0 0 10px rgba(242, 180, 65, 0.6); }
+.map-label.arena .badge { background: #B7791F; }
+.map-label.context { cursor: default; transform: translate(-50%, -50%); pointer-events: none; }
+.map-label.context .name { font-weight: 500; font-size: 11px; color: #AFC0CF; background: rgba(13, 19, 26, 0.55); border-color: transparent; }
+.map-label.context.park .name { color: #8FD3A8; }
 .stage[data-lod="far"] .map-label.minor .name { display: none; }
+.stage[data-lod="far"] .map-label.context, .stage[data-lod="wide"] .map-label.context { display: none; }
 .stage[data-lod="close"] .map-label.twin { display: none; }
 
 /* KPI strip */

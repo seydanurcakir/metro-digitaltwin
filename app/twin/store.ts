@@ -5,7 +5,7 @@ import { SERVICE_END_MIN } from '../../src/data/time';
 import { DATASET, SCENARIOS, getResult, type ScenarioId } from './model';
 import { getCorridor, type CorridorView } from './network';
 import { buildStationView, type StationView } from './selectors';
-import { OVERVIEW, TWINS, type LineKey, type TwinId } from './world';
+import { ARENA_VIEW, OVERVIEW, TWINS, type LineKey, type TwinId } from './world';
 import type { Scope, WindowId } from './metrics';
 
 export const SPEEDS = [1, 10, 30, 60] as const;
@@ -17,6 +17,7 @@ export type Selection =
   | { kind: 'platform'; twin: TwinId; direction: Direction }
   | { kind: 'escalator'; twin: TwinId; index: number }
   | { kind: 'station'; line: LineKey; stationId: string }
+  | { kind: 'arena' }
   | null;
 
 /** A request to move the camera; Scene animates towards it */
@@ -63,11 +64,15 @@ interface TwinState {
   setSpeed: (s: Speed) => void;
   setPlan: (id: string) => void;
   jumpTo: (hhmm: string, scenario?: ScenarioId) => void;
+  /** Switch scenario at the current time */
+  setScenario: (scenario: ScenarioId) => void;
   select: (s: Selection) => void;
   setHover: (h: boolean) => void;
   focusTwin: (id: TwinId, fly?: boolean) => void;
   flyTo: (x: number, z: number, zoom: number, azimuth?: number, polar?: number) => void;
   overview: () => void;
+  /** Show Strawberry Arena, its walkway and Solna station */
+  focusArena: () => void;
   setFollow: (f: { line: LineKey; tripId: number } | null) => void;
   setCompare: (p: { window?: WindowId; scope?: Scope }) => void;
   setPanel: (p: PanelId) => void;
@@ -138,6 +143,11 @@ export const useTwin = create<TwinState>((set, get) => ({
       follow: fol?.line === 'T14' ? null : fol,
     });
   },
+  setScenario: (sc) => {
+    if (sc === get().scenario) return;
+    const sel = get().selection;
+    set({ scenario: sc, ...build(get().planId, sc), selection: sel?.kind === 'train' ? null : sel, follow: null });
+  },
   jumpTo: (hhmm, scenario) => {
     const sc = scenario ?? get().scenario;
     const sel = get().selection;
@@ -158,6 +168,14 @@ export const useTwin = create<TwinState>((set, get) => ({
     }
   },
   flyTo: (x, z, zoom, azimuth, polar) => set({ camera: { seq: ++seq, x, z, zoom, azimuth, polar } }),
+  focusArena: () => {
+    if (get().focus !== 'solna') set({ focus: 'solna' });
+    // On wide screens shift the view right so the scene sits beside the right-hand panels
+    const wide = typeof window !== 'undefined' && window.innerWidth >= 1280;
+    const k = wide ? 196 / ARENA_VIEW.zoom : 0;
+    const x = ARENA_VIEW.x + Math.cos(ARENA_VIEW.azimuth) * k, z = ARENA_VIEW.z - Math.sin(ARENA_VIEW.azimuth) * k;
+    set({ follow: null, selection: { kind: 'arena' }, panel: 'inspect', camera: { seq: ++seq, x, z, zoom: ARENA_VIEW.zoom, azimuth: ARENA_VIEW.azimuth, polar: 0.8 } });
+  },
   overview: () => {
     // North up, nearly top-down; shift east so the corridor sits in the area not covered by the right-hand panels
     const wide = typeof window !== 'undefined' && window.innerWidth >= 1280;

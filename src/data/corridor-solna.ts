@@ -192,3 +192,19 @@ export const TRANSFER_TC_CITY = {
   /** How transferring passengers split over the corridor lines (J40/J41/J42X) and directions */
   corridorShareByDirection: assume({ north: 0.25, south: 0.25 }, 'Half of the transferring passengers go north, half south; in each direction half of the trains are corridor lines.'),
 };
+
+/**
+ * Event service for the match-day scenario: extra commuter trains through Solna after the event,
+ * every 6 minutes with two units from 20:30 to 22:30. 10 corridor trains/h + up to 6 on the other lines
+ * stays within Citybanan's 16 commuter trains/h.
+ */
+export const CORRIDOR_EVENT_PLAN: ServicePlan = {
+  id: 'corridor-event',
+  name: 'Commuter rail with event extra trains (Solna)',
+  kind: 'candidate',
+  slots: CORRIDOR_PLAN.slots.map((s) => {
+    const m = SLOTS[s.slotIndex].startMin;
+    return m >= toMin('20:30') && m < toMin('22:30') ? { ...s, headwayMin: 6, unitsPerTrain: 2 } : s;
+  }),
+  src: { kind: 'assumption', ref: 'assumption', note: 'Illustrative event service: every 6 min with long trains from 20:30 to 22:30.' },
+};

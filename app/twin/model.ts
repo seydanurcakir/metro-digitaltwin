@@ -5,12 +5,17 @@ import { buildDataset, simulate, hhmmToSec, type SimOptions, type SimResult, typ
 export const DATASET: TwinDataset = buildDataset();
 export const FOCUS_STATION_ID = 't-centralen';
 
-export type ScenarioId = 'normal' | 'surge';
+export type ScenarioId = 'normal' | 'surge' | 'match' | 'match-plus';
 
 export interface Scenario {
   id: ScenarioId;
   name: string;
+  /** Simulation options for T14 */
   options: SimOptions;
+  /** Commuter corridor additions: the Strawberry Arena event crowd, and extra trains for it */
+  corridor?: { arenaEvent?: boolean; extraTrains?: boolean };
+  /** Short description shown under the controls */
+  note?: string;
 }
 
 const SURGE_START = hhmmToSec('21:00');
@@ -23,8 +28,24 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
     options: {
       surges: [{ stationId: FOCUS_STATION_ID, direction: 'south', startSec: SURGE_START, endSec: SURGE_START + 600, passengers: 3000 }],
     },
+    note: '+3,000 southbound at T-Centralen, 21:00–21:10',
+  },
+  match: {
+    id: 'match',
+    name: 'Match day',
+    options: {},
+    corridor: { arenaEvent: true },
+    note: 'Strawberry Arena match ends 20:50 · normal commuter timetable',
+  },
+  'match-plus': {
+    id: 'match-plus',
+    name: 'Match day + extra trains',
+    options: {},
+    corridor: { arenaEvent: true, extraTrains: true },
+    note: 'Strawberry Arena match ends 20:50 · trains every 6 min, 20:30–22:30',
   },
 };
+export const SCENARIO_IDS = Object.keys(SCENARIOS) as ScenarioId[];
 
 const cache = new Map<string, SimResult>();
 

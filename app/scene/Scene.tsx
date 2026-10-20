@@ -15,6 +15,9 @@ import { MapGround } from './MapGround';
 import { NetworkLines } from './NetworkLines';
 import { NetworkTrains } from './NetworkTrains';
 import { StationLabels } from './StationLabels';
+import { Arena } from './Arena';
+import { Walkway } from './Walkway';
+import { Context } from './Context';
 import { HoverGuard } from './interaction';
 import { CAM, LOD } from './cam';
 
@@ -22,7 +25,7 @@ const CAM_DIST = 40000;
 const POLAR = TWIN_POLAR;
 const FLY_SEC = 1.1;
 
-const lodOf = (z: number) => (z < LOD.labelsAll ? 'far' : z < 2.4 ? 'mid' : 'close');
+const lodOf = (z: number) => (z < LOD.labelsAll ? 'far' : z < 0.35 ? 'wide' : z < 2.4 ? 'mid' : 'close');
 
 interface View {
   x: number;
@@ -222,7 +225,10 @@ export function Scene() {
       <hemisphereLight args={['#FFFFFF', '#8A939C', 1.1]} />
       <Sun />
       <MapGround />
+      <Context />
       <NetworkLines />
+      <Walkway />
+      <Arena />
       <NetworkTrains />
       {TWIN_IDS.map((id) => <TwinOnMap key={id} tw={TWINS[id]} />)}
       <StationLabels />

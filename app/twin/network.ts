@@ -3,7 +3,10 @@ import {
   buildCorridor, buildStockholmNetwork, route, simulate, StationAgent, SOLNA_ID, TC_ID,
   type Corridor, type Network, type SimOptions, type SimResult, type SlotKpi,
 } from '../../src/index';
-import { DATASET, getResult, type ScenarioId } from './model';
+import { DATASET, SCENARIOS, getResult, type ScenarioId } from './model';
+import { CORRIDOR_EVENT_PLAN } from '../../src/data/corridor-solna';
+import { SIMULATED_EVENT, STRAWBERRY_ARENA } from '../../src/data/arena';
+import { arenaSurges, buildArenaFlow, type ArenaFlow } from '../../src/network/arena';
 
 export interface CorridorView {
   corridor: Corridor;
@@ -12,6 +15,14 @@ export interface CorridorView {
   solna: StationAgent;
   series: SlotKpi[];
   net: Network;
+  /** Strawberry Arena event flow, when the scenario has one */
+  arena: ArenaFlow | null;
+}
+
+let arenaFlow: ArenaFlow | null = null;
+/** The simulated event's crowd flow (independent of plan and scenario) */
+export function getArenaFlow(): ArenaFlow {
+  return (arenaFlow ??= buildArenaFlow(STRAWBERRY_ARENA, SIMULATED_EVENT));
 }
 
 const cache = new Map<string, CorridorView>();
@@ -24,10 +35,13 @@ export function getCorridor(planId: string, scenario: ScenarioId): CorridorView 
   if (!v) {
     if (!reference) reference = buildCorridor(DATASET, getResult('current', 'normal')).transfer;
     const corridor = buildCorridor(DATASET, getResult(planId, scenario), reference);
-    const opts = { surges: corridor.transfer.surges };
+    const cfg = SCENARIOS[scenario].corridor ?? {};
+    const arena = cfg.arenaEvent ? getArenaFlow() : null;
+    const opts = { surges: [...corridor.transfer.surges, ...(arena ? arenaSurges(arena, STRAWBERRY_ARENA.southShare.value) : [])] };
+    if (cfg.extraTrains) corridor.ds = { ...corridor.ds, plans: [CORRIDOR_EVENT_PLAN, ...corridor.ds.plans] };
     const result = simulate(corridor.ds, corridor.ds.plans[0], opts);
     const solna = new StationAgent(corridor.ds, result, SOLNA_ID, opts);
-    v = { corridor, result, opts, solna, series: solna.timeSeries(60), net: buildStockholmNetwork(DATASET, corridor) };
+    v = { corridor, result, opts, solna, series: solna.timeSeries(60), net: buildStockholmNetwork(DATASET, corridor), arena };
     cache.set(key, v);
   }
   return v;

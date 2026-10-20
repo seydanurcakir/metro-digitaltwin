@@ -1,6 +1,6 @@
 // Controls and live readouts over the map. Numbers come from the store and selectors, never typed by hand.
 import { useTwin, SPEEDS } from '../twin/store';
-import { DATASET, SCENARIOS, UI_PLANS } from '../twin/model';
+import { DATASET, SCENARIOS, UI_PLANS, type ScenarioId } from '../twin/model';
 import { fmtClock, fmtDec, fmtInt, fmtSecs, nextArrivals, platformAt } from '../twin/selectors';
 import { LINES, TWINS, TWIN_IDS } from '../twin/world';
 import { HEAT_STEPS } from '../scene/Crowd';
@@ -9,10 +9,11 @@ import { Inspector } from './Inspector';
 import { Compare, KpiStrip } from './Metrics';
 import { NetworkPanel } from './NetworkPanel';
 
-const JUMPS: { label: string; hhmm: string; scenario: 'normal' | 'surge' }[] = [
+const JUMPS: { label: string; hhmm: string; scenario: ScenarioId }[] = [
   { label: 'Morning peak', hhmm: '07:56', scenario: 'normal' },
   { label: 'Midday', hhmm: '12:28', scenario: 'normal' },
   { label: 'Evening crowd', hhmm: '20:58', scenario: 'surge' },
+  { label: 'Match exit', hhmm: '20:48', scenario: 'match' },
 ];
 
 function Dock() {
@@ -34,7 +35,7 @@ function Dock() {
 
 function Places() {
   const focus = useTwin((s) => s.focus);
-  const { focusTwin, overview } = useTwin.getState();
+  const { focusTwin, overview, focusArena } = useTwin.getState();
   return (
     <div className="places" role="group" aria-label="Go to">
       {TWIN_IDS.map((id) => (
@@ -43,6 +44,10 @@ function Places() {
           {TWINS[id].name}
         </button>
       ))}
+      <button type="button" id="go-arena" className="place" onClick={focusArena}>
+        <span className="mini-badge arena" aria-hidden="true">A</span>
+        Strawberry Arena
+      </button>
       <button type="button" id="go-overview" className="place" onClick={overview}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6 L9 3 L15 6 L21 3 V18 L15 21 L9 18 L3 21 Z M9 3 V18 M15 6 V21" /></svg>
         Corridor map
@@ -114,14 +119,14 @@ export function Hud() {
           <div className="row wrap">
             <span className="label">Jump</span>
             {JUMPS.map((j) => (
-              <button type="button" key={j.hhmm} id={`jump-${j.hhmm}`} className="chip" onClick={() => jumpTo(j.hhmm, j.scenario)}>
+              <button type="button" key={j.hhmm} id={`jump-${j.hhmm}`} className="chip" onClick={() => { jumpTo(j.hhmm, j.scenario); if (j.scenario === 'match') useTwin.getState().focusArena(); }}>
                 {j.label} <span className="num">{j.hhmm}</span>
               </button>
             ))}
           </div>
           <p className="scenario">
             Scenario: <strong>{SCENARIOS[scenario].name}</strong>
-            {scenario === 'surge' && <span className="muted"> · +3,000 southbound at T-Centralen, 21:00–21:10</span>}
+            {SCENARIOS[scenario].note && <span className="muted"> · {SCENARIOS[scenario].note}</span>}
           </p>
           <p className="hint">Drag to pan · wheel to zoom · right-drag to rotate · click stations, trains and platforms</p>
         </section>

@@ -62,6 +62,24 @@ export const SOURCES: SourceRef[] = [
     note: 'Coordinates taken from the infobox of each station article (retrieved October 2026).',
   },
   {
+    id: 'wiki-strawberry',
+    title: 'Wikipedia – Strawberry Arena (Nationalarenan)',
+    url: 'https://en.wikipedia.org/wiki/Nationalarenan',
+    note: 'Coordinates 59.3725 N, 18.0000 E; capacity 50,000 football / 65,000 concerts; retractable roof; pitch 105 × 68 m; Solna station about 700 m on foot.',
+  },
+  {
+    id: 'park-vasalund',
+    title: 'Pacer – Vasalundsparken, Solna',
+    url: 'https://www.mypacer.com/parks/198512/vasalundsparken-solna',
+    note: 'Park location 59.36831 N, 18.00208 E (point only; outline drawn approximately).',
+  },
+  {
+    id: 'comfort-hotel',
+    title: 'Strawberry – Comfort Hotel Solna',
+    url: 'https://strawberryhotels.com/hotels/sweden/solna/comfort-hotel-solna',
+    note: 'Address Evenemangsgatan 48, Solna, next to the arena; no coordinates published, position approximate.',
+  },
+  {
     id: 'assumption',
     title: 'Model assumption',
     note: 'No published value found; a reasonable starting value to be replaced with operator data.',

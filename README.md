@@ -6,10 +6,37 @@ A simulation-driven digital twin of Stockholm's red metro line T14 (Fruängen �
 
 ```bash
 npm install
-npm test        # data model + simulation + app + optimiser + network + map tests
+npm test        # data model + simulation + app + optimiser + network + map + arena tests
 npm run dev     # open the 3D map in the browser
 npm run build   # single-file page in dist/
 ```
+
+## Step 9: Solna surroundings and Strawberry Arena (Scenario 2: event crowds)
+
+- **Context around Solna** (static, low-poly, not simulated): Vasalundsparken with trees (position from Pacer, outline approximate), Comfort Hotel Solna on Evenemangsgatan (position approximate) and representative street blocks. The blocks are generated, not surveyed; they keep clear of the railway, the arena, the walkway, the park and the area reserved for Mall of Scandinavia (next step).
+- **Strawberry Arena** at its published coordinates (59.3725 N, 18.0000 E), about 820 m north-west of Solna station. Low-poly bowl with an open roof and pitch; the stands fill with colour as visitors arrive and empty after the event, and a light band shows the event phase. Click it, use the **Strawberry Arena** button, or the **Match exit** jump.
+- **Walkway to Solna station** (drawn 651 m; published walk ~700 m) ending at the station's north footbridge. People walking to the station and the queue at the arena gate are drawn live.
+- **Crowd flow model** (`src/network/arena.ts`): 90% of visitors leave within 25 min of the final whistle; 30% go by commuter rail from Solna, 80% of them southbound. The walkway carries 360 people/min (8 m × 45 people/m/min), so a queue forms at the arena; after the ~12 min walk, visitors arrive on the Solna platforms as simulation surges.
+- **Scenarios:** *Match day* (normal commuter timetable) and *Match day + extra trains* (every 6 min with long trains, 20:30–22:30, within Citybanan's 16 commuter trains/h). The arena panel compares them:
+
+| After the 20:50 final whistle | Normal timetable | Extra trains |
+|---|---|---|
+| 90% of the rail-bound crowd boarded at Solna | over 3 h | 49 min |
+| Peak on the Solna platform | 9,439 | 1,941 |
+| Peak density | 5.90 people/m² | 1.21 people/m² |
+| Left behind (person-times) | 49,310 | 0 |
+| Highest train load | 100% | 99% |
+
+The event, its attendance (42,000) and the schedule are **illustrative**; shares, walkway width and flow rate are assumptions to replace with operator and venue data. Fans arriving by train before kick-off are not modelled yet, and the model lets the whole crowd onto the platform (in practice staff would meter entry).
+
+| File | Contents |
+|---|---|
+| `src/data/arena.ts` | Arena data with provenance, illustrative event schedule |
+| `src/network/arena.ts` | Egress curve, walkway queue, surges at Solna, live state |
+| `app/twin/context.ts` | Park, hotel, generated blocks and their clearance checks |
+| `app/twin/arena.ts` | Match-day metrics from the corridor simulation |
+| `app/scene/Arena.tsx`, `Walkway.tsx`, `Context.tsx` | Arena model, live walkway, surroundings |
+| `scripts/test-arena.ts` | Placement, clearances, flow conservation, walkway capacity, scenario effects |
 
 ## Step 8: Map, two station twins and live trains
 

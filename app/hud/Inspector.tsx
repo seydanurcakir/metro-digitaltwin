@@ -8,6 +8,13 @@ import { LINES, TWINS, twinOfStation, type LineKey, type TwinId } from '../twin/
 import { trainPose } from '../twin/trainpose';
 import { loadColor } from '../scene/palette';
 import { CAM } from '../scene/cam';
+import { SCENARIOS, type ScenarioId } from '../twin/model';
+import { getArenaFlow } from '../twin/network';
+import { eventMetrics } from '../twin/arena';
+import { WALKWAY_LENGTH_M } from '../twin/world';
+import { ARENA_EVENTS, SIMULATED_EVENT, STRAWBERRY_ARENA } from '../../src/data/arena';
+import { arenaStateAt } from '../../src/network/arena';
+import { SOURCES } from '../../src/data/sources';
 
 const KIND_LABEL: Record<ProvenanceKind, string> = { published: 'Published', derived: 'Derived', assumption: 'Assumption', synthetic: 'Synthetic' };
 
@@ -315,5 +322,121 @@ export function Inspector() {
   if (sel.kind === 'train') return <TrainPanel key={`${sel.line}-${sel.tripId}`} line={sel.line} tripId={sel.tripId} />;
   if (sel.kind === 'platform') return <PlatformPanel twin={sel.twin} direction={sel.direction} />;
   if (sel.kind === 'escalator') return <EscalatorPanel twin={sel.twin} index={sel.index} />;
+  if (sel.kind === 'arena') return <ArenaPanel />;
   return <StationPanel line={sel.line} stationId={sel.stationId} />;
+}
+
+const ArenaIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="12" rx="9" ry="6.5" /><ellipse cx="12" cy="12" rx="4.5" ry="2.8" /></svg>
+);
+
+const fmtMin = (sec: number | null) => (sec == null ? 'over 3 h' : `${Math.round(sec / 60)} min`);
+const EVENT_SCENARIOS: { id: ScenarioId; label: string }[] = [
+  { id: 'normal', label: 'No event' },
+  { id: 'match', label: 'Match day' },
+  { id: 'match-plus', label: '+ extra trains' },
+];
+
+function ArenaPanel() {
+  const t = useTwin((s) => Math.floor(s.t));
+  const scenario = useTwin((s) => s.scenario);
+  const planId = useTwin((s) => s.planId);
+  const { setScenario, jumpTo } = useTwin.getState();
+  const A = STRAWBERRY_ARENA, ev = SIMULATED_EVENT;
+  const hasEvent = !!SCENARIOS[scenario].corridor?.arenaEvent;
+  const st = hasEvent ? arenaStateAt(getArenaFlow(), ev, t) : null;
+  const flow = getArenaFlow();
+  const mA = eventMetrics(planId, 'match')!, mB = eventMetrics(planId, 'match-plus')!;
+  const cols = [
+    { id: 'match' as ScenarioId, label: 'Normal timetable', m: mA },
+    { id: 'match-plus' as ScenarioId, label: 'Extra trains', m: mB },
+  ];
+  const rows: { label: string; v: (m: typeof mA) => string; warn?: (m: typeof mA) => boolean }[] = [
+    { label: 'Crowd dispersion (90% boarded)', v: (m) => fmtMin(m.dispersionSec), warn: (m) => m.dispersionSec == null || m.dispersionSec > 3600 },
+    { label: 'Peak on Solna platform', v: (m) => fmtInt(m.peakPlatform) },
+    { label: 'Peak density (people/m²)', v: (m) => fmtDec(m.peakDensity), warn: (m) => m.peakDensity >= m.densityLimit },
+    { label: 'Left behind (person-times)', v: (m) => fmtInt(m.leftBehind), warn: (m) => m.leftBehind >= 1 },
+    { label: 'Highest train load', v: (m) => pct(m.maxDepartureLoad), warn: (m) => m.maxDepartureLoad > m.loadLimit },
+    { label: 'Trains at Solna, first 2 h', v: (m) => String(m.trains) },
+  ];
+  const src = new Map(SOURCES.map((x) => [x.id, x]));
+  const facts = [
+    { label: 'Capacity, football', value: fmtInt(A.capacity.football.value), s: A.capacity.football.src },
+    { label: 'Capacity, concerts', value: fmtInt(A.capacity.concert.value), s: A.capacity.concert.src },
+    { label: 'Walk to Solna station', value: `${fmtInt(A.walkway.lengthM.value)} m (route drawn ${fmtInt(WALKWAY_LENGTH_M)} m)`, s: A.walkway.lengthM.src },
+    { label: 'Walkway capacity', value: `${fmtInt(flow.capacityPerBin)} people/min`, s: A.walkway.widthM.src },
+    { label: 'Leave by commuter rail at Solna', value: pct(A.railShare.value), s: A.railShare.src },
+    { label: 'Of those, towards Stockholm City', value: pct(A.southShare.value), s: A.southShare.src },
+    { label: '90% out of the bowl within', value: `${A.egressP90Min.value} min`, s: A.egressP90Min.src },
+  ];
+  return (
+    <Panel icon={<ArenaIcon />} title="Strawberry Arena" sub="Event venue · Arenastaden, Solna" pill={st ? st.phase : 'no event in this scenario'} pillTone={st?.phase === 'egress' ? 'warn' : 'info'}>
+      <div className="seg" role="group" aria-label="Event scenario">
+        {EVENT_SCENARIOS.map((x) => (
+          <button type="button" key={x.id} id={`arena-sc-${x.id}`} aria-pressed={scenario === x.id} onClick={() => setScenario(x.id)}>{x.label}</button>
+        ))}
+      </div>
+      <div className="event-card">
+        <div><span className="label">{ev.day}</span><strong>{ev.title}</strong></div>
+        <p className="num muted">Gates {ev.gatesOpen} · kick-off {ev.start} · ends {ev.end} · {fmtInt(ev.attendance.value)} expected ({pct(ev.attendance.value / A.capacity.football.value)} of capacity)</p>
+      </div>
+      {st ? (
+        <div className="mini-grid">
+          <Stat label="Inside arena" value={fmtInt(st.inside)} sub="visitors" />
+          <Stat label="Queue at arena" value={fmtInt(st.queue)} sub="waiting for walkway" tone={st.queue > 1000 ? 'warn' : undefined} />
+          <Stat label="On walkway" value={fmtInt(st.onWalkway)} sub="walking to Solna" />
+          <Stat label="Reached Solna" value={fmtInt(st.atStation)} sub={`of ${fmtInt(flow.railFans)} by rail`} />
+        </div>
+      ) : (
+        <p className="note muted">No event runs in this scenario. Choose Match day to send the crowd to Solna station.</p>
+      )}
+      <div className="btn-row">
+        <button type="button" id="arena-jump" className="btn small primary" onClick={() => { jumpTo('20:48', hasEvent ? scenario : 'match'); useTwin.getState().focusArena(); }}>
+          Go to the final whistle ({ev.end})
+        </button>
+      </div>
+      <div className="label">Event crowd at Solna station · after {ev.end}</div>
+      <div className="table-wrap">
+        <table className="cmp">
+          <thead>
+            <tr><th scope="col">Metric</th>{cols.map((c) => <th scope="col" key={c.id} className={scenario === c.id ? 'sel' : ''}>{c.label}</th>)}</tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.label}>
+                <th scope="row">{r.label}</th>
+                {cols.map((c) => <td key={c.id} className="num" style={{ color: r.warn?.(c.m) ? 'var(--warn)' : undefined }}>{r.v(c.m)}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="note muted">
+        {fmtInt(flow.railFans)} visitors walk to Solna. The walkway carries {fmtInt(flow.capacityPerBin)} people/min, so up to {fmtInt(mA.walkwayPeakQueue)} queue at the arena; the queue is gone {fmtMin(mA.walkwayQueueClearSec)} after the final whistle. Extra trains run every 6 min with long trains, 20:30–22:30.
+      </p>
+      <div className="label">Event schedule (illustrative)</div>
+      <ul className="schedule">
+        {ARENA_EVENTS.map((e) => (
+          <li key={e.id} className={e.simulated ? 'on' : ''}>
+            <span className="num">{e.day}</span>
+            <span>{e.title}</span>
+            <span className="num muted">{e.start}–{e.end} · {fmtInt(e.attendance.value)}</span>
+          </li>
+        ))}
+      </ul>
+      <dl className="facts">
+        {facts.map((f) => (
+          <div key={f.label} className="fact">
+            <dt>{f.label}</dt>
+            <dd className="num">{f.value}</dd>
+            <dd className="fact-src">
+              <span className={`kind ${f.s.kind}`}>{KIND_LABEL[f.s.kind]}</span>
+              <span className="muted" title={f.s.note}>{src.get(f.s.ref)?.title ?? f.s.ref}</span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p className="note muted">Scope: crowd leaving after the event. Fans arriving by train before kick-off are not modelled yet, and the model lets the whole crowd onto the platform; in practice staff would hold people back at the entrance. Mall of Scandinavia comes in the next step.</p>
+    </Panel>
+  );
 }

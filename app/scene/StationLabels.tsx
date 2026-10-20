@@ -3,7 +3,8 @@
 import { useCallback } from 'react';
 import { Html } from '@react-three/drei';
 import { useTwin } from '../twin/store';
-import { MAP_STATIONS, type MapStation } from '../twin/world';
+import { ARENA, MAP_STATIONS, type MapStation } from '../twin/world';
+import { LANDMARKS } from '../twin/context';
 import { CAM } from './cam';
 
 function Label({ s }: { s: MapStation }) {
@@ -37,10 +38,36 @@ function Label({ s }: { s: MapStation }) {
   );
 }
 
+/** Strawberry Arena: opens its panel and frames arena, walkway and station */
+function ArenaLabel() {
+  const bind = useCallback((el: HTMLButtonElement | null) => {
+    if (!el || el.dataset.bound) return;
+    el.dataset.bound = '1';
+    el.addEventListener('click', (e) => { e.stopPropagation(); useTwin.getState().focusArena(); });
+  }, []);
+  return (
+    <Html position={[ARENA.pos.x, ARENA.h, ARENA.pos.z]} zIndexRange={[20, 0]}>
+      <button ref={bind} type="button" className="map-label arena major" id="map-strawberry-arena" aria-label="Strawberry Arena: open the arena twin">
+        <span className="dot" aria-hidden="true" />
+        <span className="name">Strawberry Arena</span>
+        <span className="badge">Event</span>
+      </button>
+    </Html>
+  );
+}
+
 export function StationLabels() {
   return (
     <group>
       {MAP_STATIONS.map((s) => <Label key={`${s.line}-${s.id}`} s={s} />)}
+      <ArenaLabel />
+      {LANDMARKS.map((l) => (
+        <Html key={l.id} position={[l.pos.x, 0, l.pos.z]} zIndexRange={[19, 0]}>
+          <span className={`map-label context ${l.kind}`} title={l.note}>
+            <span className="name">{l.name}</span>
+          </span>
+        </Html>
+      ))}
     </group>
   );
 }

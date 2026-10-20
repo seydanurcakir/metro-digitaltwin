@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { Scene } from './scene/Scene';
 import { Hud } from './hud/Hud';
 import { useTwin } from './twin/store';
-import { UI_PLANS, getResult } from './twin/model';
+import { SCENARIO_IDS, UI_PLANS, getResult } from './twin/model';
 import { p90Series } from './twin/metrics';
 import { getCorridor } from './twin/network';
 import './styles.css';
@@ -28,7 +28,7 @@ function useClock() {
 function usePrewarm() {
   useEffect(() => {
     const jobs: (() => void)[] = [];
-    for (const sc of ['normal', 'surge'] as const)
+    for (const sc of SCENARIO_IDS)
       for (const p of UI_PLANS)
         jobs.push(() => { getResult(p.id, sc); p90Series(p.id, sc, 'station'); p90Series(p.id, sc, 'line'); getCorridor(p.id, sc); });
     let id = 0;
